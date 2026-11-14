@@ -32,7 +32,10 @@ body { margin: 0; background: var(--outer); color: var(--ink); font-family: var(
 button { font: inherit; color: inherit; }
 button:focus-visible, [role="button"]:focus-visible { outline: 3px solid #ffd54a; outline-offset: 2px; }
 
-.app { --w: min(100vw, 480px); --sw: calc(var(--w) * 4); --ww: calc(var(--sw) * 10); --sh: calc(var(--sw) / 1.84616); --step: var(--w); position: relative; height: 100%; width: min(100%, 480px); margin-inline: auto; overflow: hidden;
+/* أبو حفص (14 Nov): «حين فتحت البرنامج على الجهاز اللوحي ظهرت الشاشة صغيرة»: it was kept a phone's width (480px) in the middle
+   of any screen. Now it takes the whole width, as far as the drawing allows: the garden fills the screen's height, and a wider
+   screen shows more of it (only on a screen wider than the drawing itself are there bands on its two sides). */
+.app { --w: 100vw; --sw: calc(var(--w) * 4); --ww: calc(var(--sw) * 10); --sh: calc(var(--sw) / 1.84616); --step: var(--w); --bs: 1; position: relative; height: 100%; width: min(100%, 184.6vh); width: min(100%, 184.6dvh); margin-inline: auto; overflow: hidden;
   background: linear-gradient(to left, var(--sky-b), var(--sky-a)); box-shadow: 0 0 40px rgba(31, 42, 30, .18); }
 
 /* the garden */
@@ -287,7 +290,7 @@ button:focus-visible, [role="button"]:focus-visible { outline: 3px solid #ffd54a
   box-shadow: 0 3px 10px rgba(0, 0, 0, .15); }
 .round svg { width: 22px; height: 22px; stroke: var(--ink); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 /* the guide bird stands in the bottom corner; what it says appears in a speech bubble beside its beak */
-.bubble { position: absolute; right: 104px; bottom: 86px; width: max-content; max-width: calc(100% - 120px); z-index: 3;
+.bubble { position: absolute; right: calc(10px + 94px * var(--bs)); bottom: calc(30px + 56px * var(--bs)); width: max-content; max-width: min(calc(100% - 20px - 100px * var(--bs)), 520px); z-index: 3;
   background: #fff; border-radius: 18px; padding: 10px 14px; font-size: 16px; line-height: 1.65; direction: rtl; text-wrap: pretty;
   box-shadow: 0 4px 16px rgba(0, 0, 0, .16); transform-origin: 100% 100%; transition: opacity .3s, transform .35s cubic-bezier(.3, 1.5, .5, 1); cursor: pointer; }
 .bubble::after { content: ""; position: absolute; right: -7px; bottom: -6px; width: 18px; height: 18px; background: #fff;
@@ -337,7 +340,8 @@ button:focus-visible, [role="button"]:focus-visible { outline: 3px solid #ffd54a
 .sheet { position: absolute; left: 0; right: 0; bottom: 0; z-index: 6; background: var(--paper); border-radius: 22px 22px 0 0; direction: rtl;
   padding-top: 10px; padding-bottom: max(18px, env(safe-area-inset-bottom, 0px));
   padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
-  transform: translateY(105%); transition: transform .3s cubic-bezier(.2, .8, .2, 1); box-shadow: 0 -8px 30px rgba(0, 0, 0, .18); max-height: 86%; overflow-y: auto; }
+  transform: translateY(105%); transition: transform .3s cubic-bezier(.2, .8, .2, 1); box-shadow: 0 -8px 30px rgba(0, 0, 0, .18); max-height: 86%; overflow-y: auto;
+  max-width: 600px; margin-inline: auto; }
 .sheet.open { transform: none; }
 .grab { width: 40px; height: 5px; border-radius: 3px; background: var(--line); margin: 0 auto 10px; }
 .sheet h2 { margin: 0; font-size: 24px; font-weight: 800; text-wrap: balance; }
@@ -629,6 +633,17 @@ button:focus-visible, [role="button"]:focus-visible { outline: 3px solid #ffd54a
   .round.pulse, .arrange .deco .deco-pop { animation: none !important; }
   .round.pulse { box-shadow: 0 0 0 4px #f2c14e; }
 }
+/* a tablet or a computer: the screens over the garden keep a comfortable width in the middle instead of stretching across */
+.t-top, .t-body { padding-inline: max(14px, calc((100% - 720px) / 2)); }
+.map-top, .map-scroll { padding-inline: max(16px, calc((100% - 680px) / 2)); }
+/* the two arrows of a computer (a mouse, no swipe) stand at the two sides of the garden: «.round» had made them part of the
+   page's flow, so both stood on the left, one of them half outside */
+.round.arrow { position: absolute; margin: 0; }
+@media (min-width: 700px) and (min-height: 700px) {
+  .ch-inner { max-width: 560px; }
+  .w-inner { max-width: max(460px, min(640px, 56vh)); }
+  .letter { width: min(92%, 520px); }
+}
 </style>
 
 <div class="app" id="app">
@@ -856,7 +871,7 @@ const TEST_TOOLS = !API || new URLSearchParams(location.search).has('test');
 const SESSION_KEY = 'bustan-session';
 let session = null, syncTimer = null, pushing = false, updateWaiting = null;
 function isStudent() { return !!(session && session.user.role === 'student'); }
-const APP_VERSION = '2026.11.14';
+const APP_VERSION = '2026.11.14.2';
 const DEFAULTS = { leaves: LEAF_ORDER.length, opened: 1, stars: 0, plough: false, portionMax: 5, chainOne: 3, chainJoin: 3, reviewEvery: 1 };
 const SAMPLE = {};
 let settings = { ...DEFAULTS }, plots = {};
@@ -1295,7 +1310,8 @@ function ripple(w) {
 // the bucket in ناصح's claws is drawn the size of the plants' buckets, so one can become the other where it stands
 function carrySizeTo(br) {
   if (!br.width) return;
-  Object.assign(carryB.style, { width: br.width + 'px', height: br.height + 'px', left: -br.width / 2 + 'px', top: 14 - br.height / 2 + 'px' });
+  const k = BS;          // inside ناصح, who is drawn BS times bigger: the same size on the screen as the plant's bucket
+  Object.assign(carryB.style, { width: br.width / k + 'px', height: br.height / k + 'px', left: -br.width / 2 / k + 'px', top: (14 - br.height / 2) / k + 'px' });
 }
 function carrySize(k) { carrySizeTo(slotEls[k].pourG.getBoundingClientRect()); }
 function carryReset() { carryB.style.cssText = ''; carryImgs[1].style.opacity = ''; }
@@ -1317,10 +1333,10 @@ function wallOn() {
 function diveP() {
   return new Promise((ok) => {
     const wall = wallOn(), A = app.getBoundingClientRect(), r = wellD.mouth.getBoundingClientRect();
-    const y0 = bird.y, depth = Math.max(30, r.bottom - A.top - (y0 - BIRD.feet[1] * bk) + 6);
+    const y0 = bird.y, depth = Math.max(30, r.bottom - A.top - (y0 - BIRD.feet[1] * bk * BS) + 6);
     // nothing of him or the bucket shows under the well: below its foot he is cut off (his own lines: y down from his feet)
     const foot = wellD.box.getBoundingClientRect().bottom - A.top - 3;
-    const cut = () => { const yb = (foot - bird.y).toFixed(1); guide.style.clipPath = `polygon(-600px -600px, 600px -600px, 600px ${yb}px, -600px ${yb}px)`; };
+    const cut = () => { const yb = ((foot - bird.y) / BS).toFixed(1); guide.style.clipPath = `polygon(-600px -600px, 600px -600px, 600px ${yb}px, -600px ${yb}px)`; };
     const T1 = 1050, T2 = 800, t0 = performance.now(); let filled = false;
     ripple(wellD.well);
     (function frame(now) {
@@ -1396,7 +1412,7 @@ async function birdPour(k, done) {
   await flyP({ x: foot.x - side * br.width * 1.05, y: foot.y - br.height * 1.7 - 14 }, 900, 30);
   // he leans toward the plant and the bucket tips further in his claws, turning about them
   const LEAN = 26, TIP = 54, T = 3000, mirror = bird.dir > 0 ? -1 : 1;
-  carryB.style.transformOrigin = `${br.width / 2}px ${br.height / 2 - 14}px`;
+  carryB.style.transformOrigin = `${br.width / 2 / BS}px ${(br.height / 2 - 14) / BS}px`;
   tiltP(side * LEAN, T * .18);
   const tip = carryB.animate([{ transform: 'rotate(0deg)' }, { transform: `rotate(${side * TIP * mirror}deg)`, offset: .18 }, { transform: `rotate(${side * TIP * mirror}deg)`, offset: .82 }, { transform: 'rotate(0deg)' }], { duration: T, easing: 'ease-in-out' });
   carryImgs[1].animate([{ transform: 'translateY(0px) scale(1)' }, { transform: 'translateY(0px) scale(1)', offset: .2 }, { transform: 'translateY(9px) scale(.6)', offset: .8 }, { transform: 'translateY(9px) scale(.6)' }], { duration: T, fill: 'forwards' });
@@ -4316,11 +4332,14 @@ const app = $('app'), scroller = $('scroller'), dots = [...$('dots').children];
 // swipe are spread evenly over what is left to scroll.
 // The ten gardens make one swipe of forty stops (four in each garden), spread evenly.
 let STEP = 1, SW = 1, SH = 1, KPX = 1;     // one garden's width and height on the screen, and screen pixels to a point of the drawing
+// ناصح is drawn for a phone's garden; on a tablet held upright the garden is drawn bigger, and he grows with it (BS)
+let BS = 1;
 for (let i = 0; i < NSTOP; i++) { const s = document.createElement('div'); s.className = 'snap'; s.style.left = `calc(var(--step) * ${i})`; $('pano').prepend(s); }
 function size() {
   const w = app.clientWidth, h = app.clientHeight, full = 4 * w / 1.84616;
   const sw = full > h ? Math.max(w, h * 1.84616) : 4 * w, ww = sw * (NG + 1 / PER);
   STEP = Math.max(1, (ww - w) / (NSTOP - 1)); SW = sw; SH = sw / 1.84616; KPX = SH / ART.H;
+  BS = Math.min(1.6, Math.max(1, SH / 860)); app.style.setProperty('--bs', BS.toFixed(3));
   app.style.setProperty('--w', w + 'px'); app.style.setProperty('--sw', sw + 'px'); app.style.setProperty('--ww', ww + 'px'); app.style.setProperty('--step', STEP + 'px');
   layoutSky(); para(); near();
 }
@@ -4431,9 +4450,9 @@ BIRD.parts.forEach((q) => {
 });
 
 const bird = { x: 0, y: 0, dir: -1, perched: false, busy: false, tilt: 0 };    // dir -1: faces left, as drawn
-function perchAt() { return { x: app.clientWidth - 10 - (BIRD.w - BIRD.feet[0]) * bk, y: app.clientHeight - 30 }; }
+function perchAt() { return { x: app.clientWidth - 10 - (BIRD.w - BIRD.feet[0]) * bk * BS, y: app.clientHeight - 30 }; }
 // his lean (bird.tilt, degrees on the screen) turns him about his feet: in flight, and as he pours a bucket
-function place() { guide.style.transform = `translate(${bird.x}px, ${bird.y}px) rotate(${(bird.tilt || 0).toFixed(2)}deg) scale(${bird.dir > 0 ? -1 : 1}, 1)`; guide.style.setProperty('--flip', bird.dir > 0 ? -1 : 1); }
+function place() { guide.style.transform = `translate(${bird.x}px, ${bird.y}px) rotate(${(bird.tilt || 0).toFixed(2)}deg) scale(${(bird.dir > 0 ? -1 : 1) * BS}, ${BS})`; guide.style.setProperty('--flip', bird.dir > 0 ? -1 : 1); }
 function pose(p) { guide.classList.toggle('stand', p === 'stand'); guide.classList.toggle('fly', p === 'fly'); }
 
 // fly along a curve; the wings beat by swapping the raised and lowered drawings
