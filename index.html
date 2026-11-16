@@ -1,5 +1,11 @@
+<!doctype html>
+<html lang="ar" translate="no" class="notranslate">
 <meta charset="utf-8">
 <title>بساتين الحفّاظ</title>
+<!-- أبو حفص (16 Nov): the door showed «بساتين الفتاح دا ... الخصومات ... المطار»: the phone's browser took the page for another
+     language and «translated» it into Arabic. The page says it is Arabic, and asks not to be translated -->
+<meta name="google" content="notranslate">
+<script>(function (h) { h.lang = 'ar'; h.setAttribute('translate', 'no'); h.classList.add('notranslate'); })(document.documentElement);</script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -158,6 +164,13 @@ button:focus-visible, [role="button"]:focus-visible { outline: 3px solid #ffd54a
 .a-btns { display: flex; flex-direction: column; gap: 6px; flex: none; }
 .a-btns .btn, .a-row > .btn { min-height: 38px; font-size: 13.5px; padding: 6px 10px; border-radius: 12px; flex: none; }
 .a-err { color: #b0362f; font-size: 14px; min-height: 1.3em; margin: 6px 2px; }
+/* deleting a pupil or a teacher (أبو حفص, 16 Nov): a quiet button in the row, a red one in the box that asks */
+.a-btns .btn.del { min-height: 32px; background: #fff; color: #b0362f; box-shadow: inset 0 0 0 1.5px #e6bdb6; }
+.btn.danger { background: #b0362f; color: #fff; box-shadow: 0 3px 0 #7d241f; }
+.a-choice { display: flex; flex-direction: column; gap: 10px; margin: 10px 0 2px; font-size: 15px; line-height: 1.6; }
+.a-choice label { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; cursor: pointer; }
+.a-choice input { width: 20px; height: 20px; accent-color: var(--frond); flex: none; }
+.a-choice select { font: inherit; font-size: 15px; padding: 6px 8px; border-radius: 10px; border: 1.5px solid var(--line); background: #fff; color: var(--ink); max-width: 100%; }
 .login { position: absolute; inset: 0; z-index: 25; display: flex; align-items: center; justify-content: center; padding: 20px; direction: rtl;
   background: linear-gradient(#c6e9f5, #eef8ef 70%); }
 .login[hidden] { display: none; }
@@ -276,6 +289,7 @@ button:focus-visible, [role="button"]:focus-visible { outline: 3px solid #ffd54a
 .sign { background: var(--trunk); color: #fff8e6; border-radius: 14px; padding: 6px 16px 8px; box-shadow: 0 3px 0 #4a2a0f, 0 6px 14px rgba(0, 0, 0, .18); }
 .sign b { display: block; font-size: 20px; line-height: 1.2; font-weight: 800; }
 .sign span { font-size: 13px; opacity: .9; }
+.sign.wait { visibility: hidden; }
 .sign.can-name { cursor: pointer; }
 .sign.can-name b::after { content: '✎'; font-size: 13px; margin-inline-start: 6px; opacity: .75; }
 .sign-text { font-weight: 800; fill: #5a3410; }
@@ -689,7 +703,9 @@ button:focus-visible, [role="button"]:focus-visible { outline: 3px solid #ffd54a
 
   <div class="hud">
     <div class="hud-col">
-      <div class="sign" id="gardenSign"><b id="gardenName">بستان أحمد</b><span id="gardenCount"></span></div>
+      <!-- أبو حفص (16 Nov): «حين أفتح التطبيق يظهر اسم (بستان أحمد) أولا للحظات ثم يختفي»: the sign waits, empty, until the
+           garden it names is open -->
+      <div class="sign wait" id="gardenSign"><b id="gardenName"></b><span id="gardenCount"></span></div>
       <button class="keybar" id="keyBar" type="button" hidden><svg id="keySvg" viewBox="0 0 124 48" aria-hidden="true"></svg><span><b id="keyName"></b><small id="keyCount"></small></span></button>
     </div>
     <div class="hud-btns">
@@ -864,14 +880,15 @@ let garden = null;
 // reviewEvery: after the seal, a bucket every this many days
 // STORE_KEY: where this device keeps the garden (one for each pupil who comes in on it); savedAt: when it last changed;
 // VIEW_ONLY: a garden seen and not touched (a classmate's, or a pupil's on his teacher's screen) — nothing is kept from it
-let STORE_KEY = 'bustan-v4', savedAt = 0, VIEW_ONLY = false, GREET_NAME = 'أحمد';
+// syncedAt: the time of the sheet's copy of this garden that this device last took or sent (see «accounts»)
+let STORE_KEY = 'bustan-v4', savedAt = 0, syncedAt = 0, VIEW_ONLY = false, GREET_NAME = 'أحمد';
 // the accounts (see «accounts» near the end): the server's address from config.js, who came in, the copy to the sheet
 const API = String(window.BUSTAN_API || '').trim();
 const TEST_TOOLS = !API || new URLSearchParams(location.search).has('test');
 const SESSION_KEY = 'bustan-session';
 let session = null, syncTimer = null, pushing = false, updateWaiting = null;
 function isStudent() { return !!(session && session.user.role === 'student'); }
-const APP_VERSION = '2026.11.14.2';
+const APP_VERSION = '2026.11.16.1';
 const DEFAULTS = { leaves: LEAF_ORDER.length, opened: 1, stars: 0, plough: false, portionMax: 5, chainOne: 3, chainJoin: 3, reviewEvery: 1 };
 const SAMPLE = {};
 let settings = { ...DEFAULTS }, plots = {};
@@ -885,16 +902,20 @@ function addLog(e) { log.push({ t: Date.now(), ...e }); if (log.length > 120) lo
 function load() {
   try {
     const s = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
-    if (s) { settings = { ...DEFAULTS, ...s.settings }; plots = s.plots || {}; garden = s.garden || null; decor = s.decor || null; inv = s.inv || []; log = s.log || []; savedAt = s.savedAt || 0; Object.values(plots).forEach(migrate); return; }
+    if (s) { settings = { ...DEFAULTS, ...s.settings }; plots = s.plots || {}; garden = s.garden || null; decor = s.decor || null; inv = s.inv || []; log = s.log || []; savedAt = s.savedAt || 0; syncedAt = s.syncedAt || 0; Object.values(plots).forEach(migrate); return; }
   } catch (e) {}
   plots = {};
 }
+// AUTO: a change the program makes by itself (the day's points, the days that passed) — kept, but it is not the child's work,
+// so it does not move settings.editedAt (which decides, when two copies of his garden differ, which one has the newer work)
+let AUTO = false;
 function save() {
   if (VIEW_ONLY) return;
-  savedAt = Date.now();
-  try { localStorage.setItem(STORE_KEY, JSON.stringify({ settings, plots, garden, decor, inv, log, savedAt })); } catch (e) {}
+  savedAt = Math.max(Date.now(), syncedAt + 1); if (!AUTO) settings.editedAt = savedAt;
+  try { localStorage.setItem(STORE_KEY, JSON.stringify({ settings, plots, garden, decor, inv, log, savedAt, syncedAt })); } catch (e) {}
   if (typeof queueSync === 'function') queueSync();
 }
+function autoSave() { AUTO = true; try { save(); } finally { AUTO = false; } }
 
 function reps(n) { return n === 1 ? 'تكرار واحد' : n === 2 ? 'تكراران' : n <= 10 ? `${AR(n)} تكرارات` : `${AR(n)} تكرارًا`; }
 const POINTS = (n) => (n === 1 ? 'نقطة واحدة' : n === 2 ? 'نقطتان' : n <= 10 ? `${AR(n)} نقاط` : `${AR(n)} نقطة`);
@@ -3487,11 +3508,12 @@ function setPlaque(g, pi, lines) {
 }
 // what the teacher sent reaches the child as he goes back to his garden: the sealed palms bear their dates, ناصح tells him
 // the rest, and flies off to bring the letter
+let newsAt = 0;
 function deliverNews() {
-  const N = news(); if (!N.length) return; settings.news = []; save();
+  const N = news(); if (!N.length) return; settings.news = []; save(); newsAt = Date.now();
   const heard = N.filter((n) => n.kind === 'hear' && plots[n.k]), seals = heard.filter((n) => n.grade !== 'يُعاد').map((n) => n.k), again = heard.filter((n) => n.grade === 'يُعاد').map((n) => n.k);
   const gifts = N.filter((n) => n.kind === 'gift').map((n) => n.name), note = heard.map((n) => n.note).filter(Boolean).pop(), parentHeard = N.some((n) => n.kind === 'heard');
-  const plq = N.filter((n) => n.kind === 'plaque').pop(), letter = N.filter((n) => n.kind === 'letter').pop(), msgs = N.filter((n) => n.kind === 'msg');
+  const plq = N.filter((n) => n.kind === 'plaque').pop(), letters = N.filter((n) => n.kind === 'letter'), letter = letters.length, msgs = N.filter((n) => n.kind === 'msg');
   const from = who('شيخك', 'أبوك', 'أهلك'), of = who('شيخك', 'أبيك', 'أهلك'), parts = [];
   const gradeOf = (k) => (heard.find((n) => n.k === k) || {}).grade;
   // a sealed palm bears its dates; a sealed tree (its fruit is there from the start) shines with dew
@@ -3502,7 +3524,7 @@ function deliverNews() {
   if (note) parts.push(['قال', `لك: «${escT(note)}»`]);
 
   if (gifts.length) parts.push(['أهداك', `${gifts.map(dname).join(' و')}، تجدها في خزانتك فتضعها في بستانك حيث شئت`]);
-  if (letter) parts.push(['أرسل', 'إليك رسالة، وسأطير لأحضرها لك']);
+  if (letter) parts.push(['أرسل', `إليك ${letter > 1 ? 'رسائل' : 'رسالة'}، وسأطير لأحضرها لك`]);
   let msg = parts.length ? `${seals.length ? 'ما شاء الله! ' : again.length ? `يا ${CHILD}، ` : 'أبشر! '}` + parts.map(([v, rest], i) => (i ? 'و' + v : `${v} ${from}`) + ' ' + rest).join('، ') + '.' : '';
   if (parentHeard) msg = msg ? `${msg} وسمع أهلك وردك اليوم، فلك ${POINTS(HEARD_STARS)} ★` : `أحسنت! سمع أهلك وردك اليوم، فلك ${POINTS(HEARD_STARS)} ★`;
   let t = 0;
@@ -3510,9 +3532,10 @@ function deliverNews() {
   if (show.length) { scrollToSlot(show[0]); setTimeout(() => { show.forEach((k) => render(k, true)); count(); }, STILL ? 0 : 450); t = STILL ? 0 : 1900; }
   else if (plq) { const q = plaqueTexts.find((x) => x.d.g === plq.g && x.d.pi === plq.pi); if (q) scrollToSlotX(plq.g, q.d.x); t = STILL ? 0 : 700; }
   if (msg) setTimeout(() => tell(msg), t);
-  const letters = (letter ? [{ from: `رسالة من ${of}${letter.by ? ` ${letter.by}` : ''}`, text: `«${letter.text}»`, by: of }] : [])
+  // the letters wait in his garden until he has read them (mail, below); ناصح brings the first when he is free
+  const inbox = letters.map((l) => ({ from: `رسالة من ${of}${l.by ? ` ${l.by}` : ''}`, text: `«${l.text}»`, by: of }))
     .concat(msgs.map((m) => ({ from: `رسالة من زميلك ${m.by}`, text: `«${m.text}»`, by: `زميلك ${m.by}` })));
-  if (letters.length) { letterQ.push(...letters.slice(1)); setTimeout(() => messenger(letters[0]), t + (msg ? (STILL ? 2500 : 4500) : 0)); }
+  if (inbox.length) { mail().push(...inbox); save(); mailSoon(t + (msg ? (STILL ? 2500 : 4500) : 0)); }
 }
 // ---------- «بساتيني»: the map of the ten gardens ----------
 // each garden as a small picture: its lower hills (a light picture made for the map), and on them its own palms, pieces,
@@ -3796,7 +3819,8 @@ function waterState(k) { const p = plots[k]; return !p ? '' : p.water === 'full'
 // يظهر الشوك، ثم تسقط الأولى، ثم الثانية، وهكذا، إذا سقطت السعفات الخمس، يسقط الجذع وتموت الشجرة». Each day after the day of review
 // that passes without water is one step: five yellow branches, the thorns, five fallen, and the trunk (the twelfth step)
 const DIE_AT = 12;
-function passDays() {
+function passDays() { AUTO = true; try { passDays_(); } finally { AUTO = false; } }
+function passDays_() {
   const now = dayN(todayKey()), died = [];
   Object.keys(plots).forEach((k) => {
     const p = plots[k]; if (!p.sealed || !p.watered) return;
@@ -3813,7 +3837,7 @@ const inGarden = (g) => Array.from({ length: PER }, (_, i) => PER * g + i);
 const complete = (k) => !!plots[k] && stageOf(plots[k]).leaves === settings.leaves;
 // the sign shows the garden on the screen: its name, and how far its palms have come (or that it waits to be opened)
 function count() {
-  checkOpen();
+  checkOpen(); $('gardenSign').classList.remove('wait');
   if (stopInfo(page()).well) { $('gardenName').textContent = 'بستان البئر'; $('gardenCount').textContent = 'منه تملأ دلو السقي'; drawKey(); return; }
   const g = curG(), ks = inGarden(g), planted = ks.filter((k) => plots[k]).length, full = ks.filter(complete).length;
   $('gardenName').textContent = gname(g) || `البستان ${ORDF[g]}`; $('gardenSign').classList.toggle('named', !!gname(g)); $('gardenSign').classList.toggle('can-name', gardenOpen(g) && !VIEW_ONLY);
@@ -4505,8 +4529,24 @@ function land(done) {
 }
 // a letter from a friend: ناصح flies off, comes back with it, and when the child taps him he turns to face them and reads it
 let pendingLetter = null;
+// أبو حفص (16 Nov): «لم يعمل إرسال الرسالة من المعلم». A letter waited only in a timer: if ناصح was busy when its time came
+// (still landing, bringing water) or the program was closed before he brought it, it was gone — and the sheet had already
+// marked it delivered. Now every letter waits in the child's garden (settings.mail, kept on his device and in the sheet)
+// until he has opened it, and ناصح brings the first one as soon as he is free
+const mail = () => settings.mail || (settings.mail = []);
+let mailTimer = null;
+const freeForMail = () => bird.perched && !bird.busy && !bird.homing && !askWaiting() && wEl.hidden && !sheet.classList.contains('open') && $('shopView').hidden
+  && $('mapView').hidden && $('teach').hidden && chooser.hidden && !placing && !hunt.on && !$('letter').classList.contains('open') && $('aModal').hidden;
+function mailSoon(ms = 2500) {
+  clearTimeout(mailTimer);
+  mailTimer = setTimeout(() => {
+    if (!mail().length || pendingLetter || VIEW_ONLY) return;
+    if (freeForMail()) messenger(mail()[0]); else mailSoon(3000);
+  }, ms);
+}
 function messenger(letter) {
-  if (bird.busy) return; bird.busy = true; hideHint(); huntAsking = false;
+  if (bird.busy) return letter ? mailSoon() : undefined;
+  bird.busy = true; askCb = null; huntAsking = false; hideHint();
   pendingLetter = letter || { from: 'رسالة من زميلك عمر', text: '«ما شاء الله، بستانك جميل!»', by: 'زميلك عمر' };
   const announce = `وصلتك رسالة من ${pendingLetter.by || 'زميلك عمر'}! <b>اضغط عليّ</b> لأقرأها لك.`;
   if (STILL) { bird.busy = false; msgCardPose(true); guide.classList.add('carry-msg'); return say(announce); }
@@ -4520,11 +4560,14 @@ function openLetter(m) {
   guide.style.visibility = 'hidden';            // the same bird, now facing the child
   setTimeout(() => $('letterClose').focus({ preventScroll: true }), 350);
 }
-const letterQ = [];          // more letters, brought one after another
+// read: it leaves his mail; the next one is brought after it, and when none is left the day's surprise may be offered again
+// (a letter brought while ناصح was asking about it took the question away)
 function closeLetter() {
   const L = $('letter'); L.classList.remove('open'); L.setAttribute('aria-hidden', 'true'); $('letterBack').classList.remove('open');
-  guide.style.visibility = ''; pendingLetter = null;
-  if (letterQ.length) setTimeout(() => messenger(letterQ.shift()), STILL ? 0 : 900);
+  guide.style.visibility = ''; const was = pendingLetter; pendingLetter = null;
+  const M = mail(), i = M.findIndex((m) => m === was || (was && m.from === was.from && m.text === was.text)); if (i >= 0) { M.splice(i, 1); save(); }
+  if (M.length) mailSoon(STILL ? 0 : 900);
+  else if (i >= 0) setTimeout(() => { if (!pendingLetter && bird.perched && !bird.busy && !VIEW_ONLY) maybeOfferHunt(); }, STILL ? 500 : 2500);
 }
 $('letterClose').addEventListener('click', closeLetter);
 $('letterBack').addEventListener('click', closeLetter);
@@ -4539,9 +4582,11 @@ function tapBird() {
   say(TIPS[tip++ % TIPS.length]);
 }
 // أبو حفص (13 Nov): the child never sees the plant's sheet: ناصح tells him what comes next, and he answers with a button in the box
-let askCb = null;
+let askCb = null, askAt = 0;
+// a question of his still on the screen, asked not long ago (one left unanswered does not hold the letters and the news back)
+const askWaiting = () => !!askCb && !bubble.classList.contains('gone') && !!bubble.querySelector('[data-ask]') && Date.now() - askAt < 15000;
 function ask(html, buttons, cb) {
-  askCb = cb || null;
+  askCb = cb || null; askAt = Date.now();
   say(`${html}<span class="b-row">${buttons.map(([id, label, cls]) => `<button class="btn ${cls || 'light'}" data-ask="${id}">${label}</button>`).join('')}</span>`, { stay: true });
 }
 bubble.addEventListener('click', (e) => {
@@ -4555,7 +4600,7 @@ const GREETING = () => `السلام عليكم يا <b>${escT(GREET_NAME)}</b>!
 // أبو حفص: «وبالنقاط التي يحصل عليها عند كل دخول للبرنامج»: a few stars the first time he comes in each day
 const DAILY_STARS = 3;
 let dailyGift = false;
-function dailyVisit() { if (settings.visitDay !== todayKey()) { settings.visitDay = todayKey(); settings.stars = (settings.stars || 0) + DAILY_STARS; dailyGift = true; save(); } }
+function dailyVisit() { if (settings.visitDay !== todayKey()) { settings.visitDay = todayKey(); settings.stars = (settings.stars || 0) + DAILY_STARS; dailyGift = true; autoSave(); } }
 const greeting = () => GREETING() + (dailyGift ? ` <span class="prize"><span class="star">★</span><b>+${POINTS(DAILY_STARS)}</b></span>لدخولك اليوم، تشتري بها البذور والزينة.` : '');
 // a tree that died while he was away (its trunk fell: أبو حفص, 13 Nov)
 function deathNews() {
@@ -4564,8 +4609,10 @@ function deathNews() {
   tell(`ماتت ${names}، لأنها تُركت بلا سقي أيامًا حتى سقطت أغصانها ثم جذعها. اشترِ بذرة جديدة وازرعها، وكرّر سورتها من جديد.`);
 }
 function startBird() {
-  if (STILL) { Object.assign(bird, perchAt()); bird.perched = true; pose('stand'); place(); say(greeting()); setTimeout(() => { deathNews(); maybeOfferHunt(); }, 1500); }
-  else { bird.busy = true; Object.assign(bird, { x: -120, y: 0 }); place(); setTimeout(() => land(() => { bird.busy = false; say(greeting()); setTimeout(() => { if ((settings.dead || []).length) deathNews(); else maybeOfferHunt(); }, 5500); }), 500); }
+  // after the greeting: a tree that died, or the letters still waiting for him (before the day's surprise), or the surprise
+  const after = () => { if ((settings.dead || []).length) { deathNews(); if (mail().length) mailSoon(6000); } else if (mail().length) mailSoon(0); else maybeOfferHunt(); };
+  if (STILL) { Object.assign(bird, perchAt()); bird.perched = true; pose('stand'); place(); say(greeting()); setTimeout(after, 1500); }
+  else { bird.busy = true; Object.assign(bird, { x: -120, y: 0 }); place(); setTimeout(() => land(() => { bird.busy = false; say(greeting()); setTimeout(after, 5500); }), 500); }
 }
 Object.assign(bird, { x: -200, y: 0 }); place();
 
@@ -5291,6 +5338,7 @@ function reviewList() {
   return { ks: pick, items: [], names: pick.map((k) => 'سورة ' + SURAHS[plots[k].surah]).join(' و') };
 }
 function maybeOfferHunt() {
+  const since = Date.now() - newsAt; if (since < 9000) return void setTimeout(maybeOfferHunt, 9000 - since);     // (not over the news he has just told)
   if (settings.huntDay === today() || hunt.on || placing || !wEl.hidden || sheet.classList.contains('open') || !reviewList().ks.length) return;
   offerHunt();
 }
@@ -5502,9 +5550,11 @@ $('huntStop').addEventListener('click', () => { const was = hunt.found && !hunt.
 // (API, TEST_TOOLS, session and the sync timer are declared with the garden's state, near the top)
 function readSession() { try { const s = JSON.parse(localStorage.getItem(SESSION_KEY) || 'null'); return s && s.token && s.user ? s : null; } catch (e) { return null; } }
 function keepSession(s) { session = s; try { localStorage.setItem(SESSION_KEY, JSON.stringify(s)); } catch (e) {} }
-async function api(action, data = {}) {
+// keep: the request goes on even if the program is being closed (the last copy of the garden as the child leaves)
+async function api(action, data = {}, keep) {
+  const body = JSON.stringify({ action, token: session && session.token, ...data });
   let r;
-  try { r = await fetch(API, { method: 'POST', body: JSON.stringify({ action, token: session && session.token, ...data }) }); }
+  try { r = await fetch(API, { method: 'POST', body, keepalive: !!keep && body.length < 60000 }); }
   catch (e) { throw Object.assign(new Error('لا اتصال بالإنترنت الآن، فحاول بعد قليل'), { code: 'net' }); }
   let j; try { j = await r.json(); } catch (e) { throw Object.assign(new Error('لم يُجب الخادم كما ينبغي، فحاول بعد قليل'), { code: 'net' }); }
   if (!j.ok) {
@@ -5529,20 +5579,71 @@ function rebuildWorld() {
 }
 
 // ---------- the pupil: his garden copied to the sheet, and what his teacher and classmates send him ----------
-function queueSync(ms = 4000) { if (!isStudent() || VIEW_ONLY) return; clearTimeout(syncTimer); syncTimer = setTimeout(pushState, ms); }
+// أبو حفص (16 Nov): «اللوحات والزهور عند فتح البرنامج مرة ثانية تختفي ولا تثبت في مكانها». His garden is on his device and in
+// the sheet. When one copy changed and the other did not hear of it — the program closed before the copy went, a second
+// device, the server slow to answer as the program opened — the older copy could come back over the newer one. Now:
+//  · syncedAt: the time of the sheet's copy this device last took or sent; savedAt: when this device's copy last changed;
+//    settings.editedAt: when the child (or his teacher's orders) last changed it — not the day's points nor the days passing;
+//  · nothing is sent before this device has seen the sheet's copy (sheetSeen), and each copy sent says which sheet copy it
+//    grew from (base): if the sheet's has changed since, the server sends it back instead of covering it;
+//  · when the two differ, the one with the newer work is kept; and the copy goes a few seconds after each change, and at
+//    once when the program is put away or closed.
+let sheetSeen = false, pushAgain = false, adopting = false;
+const editedOf = (st, at) => (st && st.settings && st.settings.editedAt) || at || 0;
+function queueSync(ms = 3000) { if (!isStudent() || VIEW_ONLY || !sheetSeen || adopting) return; clearTimeout(syncTimer); syncTimer = setTimeout(pushState, ms); }
 function summaryOf() {
   const F = childFacts();
   return { g: settings.opened || 1, full: F.full, sealed: F.sealed, wait: F.wait.length, yellow: F.yellow, thorns: F.thorns, str: F.str, last: F.last,
     stars: settings.stars || 0, trees: Object.keys(plots).length, names: settings.gnames || {} };
 }
-async function pushState() {
-  if (!isStudent() || VIEW_ONLY || pushing) return;
-  pushing = true;
-  try { await api('saveState', { state: stateNow(), summary: summaryOf(), savedAt }); } catch (e) { if (e.code === 'net') queueSync(60000); }
+// the time of the sheet's copy, kept beside this device's copy without changing it
+function keepSynced() { try { const s = JSON.parse(localStorage.getItem(STORE_KEY) || 'null'); if (s) { s.syncedAt = syncedAt; localStorage.setItem(STORE_KEY, JSON.stringify(s)); } } catch (e) {} }
+async function pushState(keep) {
+  if (!isStudent() || VIEW_ONLY || !sheetSeen || adopting) return;
+  if (pushing) { pushAgain = true; return; }
+  clearTimeout(syncTimer); syncTimer = null;
+  if (savedAt <= syncedAt) return;                       // the sheet has this copy already
+  pushing = true; const at = savedAt;
+  try {
+    const r = await api('saveState', { state: stateNow(), summary: summaryOf(), savedAt: at, base: syncedAt }, keep);
+    if (r.conflict) meetSheet(r);
+    else if (r.stale) { const s = await api('myState'); meetSheet(s); }
+    else { syncedAt = Math.max(syncedAt, at); keepSynced(); }
+  } catch (e) { if (e.code === 'net') { pushing = false; return queueSync(45000); } }
   pushing = false;
+  if (pushAgain || savedAt > syncedAt) { pushAgain = false; if (savedAt > syncedAt) queueSync(1200); }
+}
+// the sheet's copy, seen now: kept (it is newer, or this device has no work of the child's that it lacks), or covered by this
+// device's (which has the newer work)
+function meetSheet(r) {
+  sheetSeen = true;
+  if (!r || !r.state || !(r.savedAt > syncedAt)) { if (savedAt > syncedAt) queueSync(600); return; }
+  const mine = editedOf({ settings }, savedAt);
+  if (mine <= syncedAt || editedOf(r.state, r.savedAt) >= mine) return adoptSheet(r);
+  syncedAt = r.savedAt; autoSave();                      // (savedAt now after the sheet's: sent over it)
+}
+// the sheet's copy becomes this device's: at once while the garden is not open yet, else when the child is not in the middle
+// of something
+function adoptSheet(r) {
+  const swap = () => {
+    adopting = false; setGlobals(r.state); savedAt = r.savedAt; syncedAt = r.savedAt;
+    try { localStorage.setItem(STORE_KEY, JSON.stringify({ ...stateNow(), savedAt, syncedAt })); } catch (e) {}
+    if (gds.length && garden) { dailyVisit(); passDays(); rebuildWorld(); }
+  };
+  if (!gds.length) return swap();
+  adopting = true; clearTimeout(syncTimer);
+  (function wait() { if (VIEW_ONLY || placing || hunt.on || !wEl.hidden || bird.busy || sheet.classList.contains('open') || pendingLetter) return setTimeout(wait, 3000); swap(); })();
+}
+// the sheet could not be reached as the program opened: it tries again, and sends nothing until it has seen the sheet's copy
+function retrySheet() {
+  setTimeout(async () => {
+    if (sheetSeen) return;
+    let r; try { r = await withTimeout(api('myState'), 15000); } catch (e) { if (e.code !== 'auth') retrySheet(); return; }
+    meetSheet(r); applyOrders(r.orders || []);
+  }, 20000);
 }
 function applyOrders(list) {
-  if (!list || !list.length) return;
+  if (!list || !list.length || VIEW_ONLY || !sheetSeen || adopting) return;
   const done = settings.doneOrders || [], ids = [];
   list.forEach((x) => { ids.push(x.id); if (done.indexOf(x.id) >= 0) return; try { applyOrder(x.o || {}); } catch (e) {} done.push(x.id); });
   settings.doneOrders = done.slice(-300); save();
@@ -5552,20 +5653,36 @@ function applyOrders(list) {
   newsSoon();
 }
 // the news reach him when nothing else is open: the wird, a sheet, the shop, a piece being set, a search
-const idle = () => wEl.hidden && !sheet.classList.contains('open') && $('shopView').hidden && $('mapView').hidden && !placing && !hunt.on && !huntAsking && !askCb && bird.perched && !bird.busy && !VIEW_ONLY && !pendingLetter && $('aModal').hidden;
+const idle = () => wEl.hidden && !sheet.classList.contains('open') && $('shopView').hidden && $('mapView').hidden && !placing && !hunt.on && !huntAsking && !askWaiting() && bird.perched && !bird.busy && !VIEW_ONLY && !pendingLetter && $('aModal').hidden;
 function newsSoon() { if (!news().length || !isStudent()) return; if (idle()) deliverNews(); else setTimeout(newsSoon, 4000); }
-async function pollOrders() { if (!isStudent() || document.visibilityState !== 'visible') return; try { const r = await api('myOrders'); applyOrders(r.orders); } catch (e) {} }
+// (not while he visits a classmate: what came would be laid in the classmate's garden, and lost with it)
+async function pollOrders() { if (!isStudent() || document.visibilityState !== 'visible' || VIEW_ONLY || !sheetSeen) return; try { const r = await api('myOrders'); applyOrders(r.orders); } catch (e) {} }
 async function studentBoot() {
   STORE_KEY = 'bustan-v4:' + session.user.id; GREET_NAME = session.user.name; CHILD = session.user.name;
   showLoading('أفتح بستانك…');
-  let r = null; try { r = await withTimeout(api('myState'), 9000); } catch (e) { if (e.code === 'auth') { hideLoading(); return; } }   // (asked to come in again)
   let local = null; try { local = JSON.parse(localStorage.getItem(STORE_KEY) || 'null'); } catch (e) {}
-  // a newer garden in the sheet (another device): it is the one opened
-  if (r && r.state && (!local || (r.savedAt || 0) > (local.savedAt || 0))) { try { localStorage.setItem(STORE_KEY, JSON.stringify({ ...r.state, savedAt: r.savedAt })); } catch (e) {} }
+  let r = null;
+  for (let i = 0; i < 2 && !r; i++) { try { r = await withTimeout(api('myState'), 15000); } catch (e) { if (e.code === 'auth') { hideLoading(); return; } } }   // (asked to come in again)
+  // nothing on this device and no answer from the sheet: a new garden here would later cover his own, so it waits
+  if (!r && !(local && local.garden)) { hideLoading(); return alertBox('لم أستطع أن أحضر بستانك الآن. تأكد من الاتصال بالإنترنت، ثم اضغط «حسنًا» لأحاول من جديد.', () => studentBoot()); }
+  if (r) {
+    sheetSeen = true;
+    if (r.state) {
+      const lSync = (local && local.syncedAt) || 0, lSaved = (local && local.savedAt) || 0;
+      const workHere = !!local && editedOf(local, lSaved) > lSync, newThere = r.savedAt > lSync;
+      try {
+        // the sheet's copy is opened when this device has none, or the sheet's is newer and this device has no newer work
+        if (!local || (newThere && (!workHere || editedOf(r.state, r.savedAt) >= editedOf(local, lSaved)))) localStorage.setItem(STORE_KEY, JSON.stringify({ ...r.state, savedAt: r.savedAt, syncedAt: r.savedAt }));
+        else if (newThere) localStorage.setItem(STORE_KEY, JSON.stringify({ ...local, syncedAt: r.savedAt, savedAt: Math.max(lSaved, r.savedAt + 1) }));   // this device's work goes over it
+      } catch (e) {}
+    }
+  }
   hideLoading(); bootGarden();
-  if (r) { if (!r.state || savedAt > (r.savedAt || 0)) queueSync(500); applyOrders(r.orders || []); }
+  if (r) { if (savedAt > syncedAt) queueSync(800); applyOrders(r.orders || []); } else retrySheet();
   setInterval(pollOrders, 90000);
-  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') pollOrders(); else if (syncTimer) { clearTimeout(syncTimer); pushState(); } });
+  const away = () => { if (savedAt > syncedAt) pushState(true); };
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') pollOrders(); else away(); });
+  window.addEventListener('pagehide', away);
 }
 
 // ---------- what the teacher sends: one way to do it, here on his screen and later on the pupil's device ----------
@@ -5583,7 +5700,7 @@ function applyOrder(o) {
     const L = T_LIMITS[o.key]; if (!L) return false;
     settings[o.key] = Math.min(L[1], Math.max(L[0], Number(o.v))); chainSync(); save(); return true;
   }
-  if (o.t === 'letter') { settings.news = news().filter((n) => n.kind !== 'letter'); news().push({ kind: 'letter', text: o.text, by: o.by || '' }); addLog({ kind: 'letter' }); return true; }
+  if (o.t === 'letter') { news().push({ kind: 'letter', text: o.text, by: o.by || '' }); addLog({ kind: 'letter' }); return true; }     // (each letter reaches him, not only the last)
   if (o.t === 'msg') { news().push({ kind: 'msg', text: o.text, by: o.from }); addLog({ kind: 'msg', from: o.from }); return true; }
   if (o.t === 'plaque') { const lines = (o.lines || []).slice(0, 2), name = 'لوحة|' + lines.join('|'); inv.push(name); news().push({ kind: 'gift', name }); addLog({ kind: 'plaque', lines }); save(); return true; }
   if (o.t === 'gift') { if (!pieceDef(o.name)) return false; inv.push(o.name); news().push({ kind: 'gift', name: o.name }); addLog({ kind: 'gift', name: o.name }); return true; }
@@ -5624,11 +5741,11 @@ async function visitFriend(f) {
   let r; try { r = await api('visitState', { studentId: f.id }); } catch (e) { hideLoading(); return alertBox(e.message); }
   hideLoading();
   if (!r.state || !r.state.garden) return tell(`لم يفتح <b>${escA(f.name)}</b> بستانه بعد.`);
-  if (syncTimer) { clearTimeout(syncTimer); await pushState(); }
+  if (savedAt > syncedAt) await pushState();
   ownState = stateNow(); const ownAt = savedAt;
   VIEW_ONLY = true; setGlobals(r.state); passDays(); rebuildWorld(); scrollToPage(0);
   visitFriend.to = f;
-  showVisit(f.name, () => { setGlobals(ownState); savedAt = ownAt; ownState = null; VIEW_ONLY = false; rebuildWorld(); scrollToPage(0); setTimeout(() => say(`رجعتَ إلى بستانك يا <b>${escA(GREET_NAME)}</b>.`), 400); }, true);
+  showVisit(f.name, () => { setGlobals(ownState); savedAt = ownAt; ownState = null; VIEW_ONLY = false; rebuildWorld(); scrollToPage(0); if (savedAt > syncedAt) queueSync(); setTimeout(() => { say(`رجعتَ إلى بستانك يا <b>${escA(GREET_NAME)}</b>.`); if (mail().length) mailSoon(4000); }, 400); }, true);
 }
 $('visitMsg').addEventListener('click', () => {
   const f = visitFriend.to; if (!f || !friends.words) return;
@@ -5683,7 +5800,7 @@ function openMyPass() {
 }
 function logout() {
   const go = () => { localStorage.removeItem(SESSION_KEY); location.replace(location.pathname); };
-  if (isStudent() && syncTimer) { clearTimeout(syncTimer); pushState().finally(go); } else go();
+  if (isStudent() && savedAt > syncedAt) withTimeout(pushState(), 8000).catch(() => {}).finally(go); else go();
 }
 
 // ---------- updates: «ضع لي زرا يمكن من خلاله تنزيل تحديثات البرنامج الجديدة» ----------
@@ -5781,7 +5898,7 @@ async function drawAcct() {
         <div class="t-sec"><h3>المعلمون</h3>${r.teachers.length ? r.teachers.map((t, i) => `<div class="a-row"><span class="t-ava" aria-hidden="true">${escA(t.name[0])}</span>
           <span class="t-who"><b>${escA(t.name)}</b><span class="t-line">اسم الدخول: ${escA(t.username)} — تلاميذه: ${AR(t.students)}${t.lastSeen ? ` — آخر دخول: ${ago(Number(t.lastSeen))}` : ''}</span>
           ${t.wait ? `<div class="t-chips"><span class="t-chip seal">ينتظر التسميع: ${AR(t.wait)}</span></div>` : ''}</span>
-          <span class="a-btns"><button class="btn primary" data-a="students" data-i="${i}">تلاميذه</button><button class="btn light" data-a="newpass" data-i="${i}">كلمة سر جديدة</button></span></div>`).join('')
+          <span class="a-btns"><button class="btn primary" data-a="students" data-i="${i}">تلاميذه</button><button class="btn light" data-a="newpass" data-i="${i}">كلمة سر جديدة</button><button class="btn del" data-a="del" data-i="${i}">حذف المعلم</button></span></div>`).join('')
           : '<p class="t-note">لم تُضف معلمًا بعد. أضف أول معلم من الأسفل.</p>'}</div>
         ${addForm('teacher')}`;
     } else {
@@ -5792,7 +5909,7 @@ async function drawAcct() {
         <div class="t-sec"><h3>التلاميذ</h3>${r.students.length ? r.students.map((s, i) => { const m = s.summary;
           return `<div class="a-row"><button class="a-open" data-a="open" data-i="${i}"><span class="t-ava" aria-hidden="true">${escA(s.name[0])}</span>
             <span class="t-who"><b>${escA(s.name)}</b><span class="t-line">${m ? `البستان ${ORDF[(m.g || 1) - 1]} — كاملة ${AR(m.full || 0)}، مثمرة ${AR(m.sealed || 0)}` : ''} ${u.role === 'teacher' ? `<small>(${escA(s.username)})</small>` : ''}</span>${chipsS(m)}</span></button>
-            ${u.role === 'teacher' ? `<span class="a-btns"><button class="btn light" data-a="newpass" data-i="${i}">كلمة سر جديدة</button></span>` : ''}</div>`; }).join('')
+            ${u.role === 'teacher' ? `<span class="a-btns"><button class="btn light" data-a="newpass" data-i="${i}">كلمة سر جديدة</button><button class="btn del" data-a="del" data-i="${i}">حذف التلميذ</button></span>` : ''}</div>`; }).join('')
           : `<p class="t-note">${u.role === 'teacher' ? 'لم تُضف تلميذًا بعد. أضف تلاميذك من الأسفل، وأعطِ كل واحد اسم دخوله وكلمة سره.' : 'لا تلاميذ عند هذا المعلم بعد.'}</p>`}</div>
         ${u.role === 'teacher' ? addForm('student') : ''}`;
     }
@@ -5821,6 +5938,7 @@ $('aBody').addEventListener('click', async (e) => {
   if (a === 'again') return drawAcct();
   if (a === 'students') { acct.teacher = x; acct.view = 'students'; return drawAcct(); }
   if (a === 'open') return openRemote(x, session.user.role === 'admin');
+  if (a === 'del') return askDelete(x);
   if (a === 'newpass') {
     const isT = x.role === 'teacher' || session.user.role === 'admin', min = isT ? 6 : 4, sug = isT ? '' : String(1000 + Math.floor(Math.random() * 9000));
     return modal(`<h3>كلمة سر جديدة لـ${escA(x.name)}</h3><p class="t-note">${isT ? 'إذا فقد المعلم كلمة سره فاكتب له كلمة جديدة (ستة أحرف على الأقل)، ثم أعطه إياها.' : 'إذا فقد التلميذ كلمة سره فتأكّد أنه هو، ثم اكتب له كلمة جديدة (أربعة على الأقل)، وأعطه إياها مكتوبة.'}</p>
@@ -5843,6 +5961,36 @@ $('aBody').addEventListener('click', async (e) => {
     } catch (x2) { err.textContent = x2.message; b.disabled = false; }
   }
 });
+
+// ---------- deleting (أبو حفص, 16 Nov: «أريد إضافة زر لحذف طالب، وزر لحذف معلم») ----------
+// a teacher deletes his pupil (with his garden); the director a teacher — and his pupils go, with their gardens, to another
+// teacher, or are deleted with him. Asked first, in plain words, for nothing deleted comes back
+const pupilsN = (n) => (n === 1 ? 'تلميذ واحد' : n === 2 ? 'تلميذان' : n <= 10 ? `${AR(n)} تلاميذ` : `${AR(n)} تلميذًا`);
+function askDelete(x) {
+  const done = (text) => { alertBox(escA(text)); drawAcct(); };
+  const go = async (b, action, q, text) => {
+    b.disabled = true;
+    try { const r = await api(action, q); done(text(r)); } catch (e) { $('dErr').textContent = e.message; b.disabled = false; }
+  };
+  if (session.user.role !== 'admin') {
+    return modal(`<h3>حذف التلميذ ${escA(x.name)}</h3><p class="a-msg">سيُحذف حسابه، وبستانه بكل ما فيه، وما أرسلتَه إليه ولم يصله بعد. ولا يمكن إرجاع شيء من ذلك بعد الحذف.</p>
+      <p class="a-err" id="dErr"></p><div class="row"><button class="btn danger" data-yes>احذفه</button><button class="btn light" data-close>إلغاء</button></div>`,
+      (b) => { if (b.hasAttribute('data-yes')) go(b, 'deleteStudent', { userId: x.id }, () => `حُذف ${x.name}`); });
+  }
+  const n = x.students || 0, others = acct.list.filter((t) => t.id !== x.id);
+  const choice = !n ? '' : `<div class="a-choice">
+      ${others.length ? `<label><input type="radio" name="dWhat" value="move" checked> أنقلهم ببساتينهم إلى المعلم <select id="dTo" aria-label="المعلم الذي ينتقلون إليه">${others.map((t) => `<option value="${escA(t.id)}">${escA(t.name)}</option>`).join('')}</select></label>` : ''}
+      <label><input type="radio" name="dWhat" value="drop"${others.length ? '' : ' checked'}> أحذفهم معه، ومعهم بساتينهم</label></div>`;
+  modal(`<h3>حذف المعلم ${escA(x.name)}</h3>
+    <p class="a-msg">${n ? `في حلقته ${pupilsN(n)}. ماذا تريد أن يكون لهم؟` : 'سيُحذف حسابه، ولا يمكن إرجاعه بعد الحذف.'}</p>${choice}
+    <p class="a-err" id="dErr"></p><div class="row"><button class="btn danger" data-yes>احذفه</button><button class="btn light" data-close>إلغاء</button></div>`, (b) => {
+    if (!b.hasAttribute('data-yes')) return;
+    const w = (document.querySelector('#aModalCard input[name="dWhat"]:checked') || {}).value, q = { userId: x.id };
+    if (n && w === 'move') q.moveTo = $('dTo').value; else if (n) q.withPupils = true;
+    const to = q.moveTo ? (others.find((t) => t.id === q.moveTo) || {}).name : '';
+    go(b, 'deleteTeacher', q, () => (q.moveTo ? `حُذف ${x.name}، وانتقل تلاميذه إلى ${to}` : n ? `حُذف ${x.name} وتلاميذه` : `حُذف ${x.name}`));
+  });
+}
 
 // ---------- the teacher (or the director) opens a pupil: his garden as it is now, with what is waiting to reach him ----------
 async function openRemote(stu, readonly) {
@@ -5881,3 +6029,5 @@ function boot() {
 
 boot();
 </script>
+
+</html>
