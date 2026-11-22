@@ -587,6 +587,12 @@ button:focus-visible, [role="button"]:focus-visible { outline: 3px solid #ffd54a
 .arrange .slots .deco .deco-pop, .arrange .plaques .deco .deco-pop { animation: arrangewob 1.2s ease-in-out infinite; transform-box: fill-box; transform-origin: 50% 100%; }
 @keyframes arrangewob { 50% { transform: rotate(3deg); } }
 .placing-free .map-btn, .placing-free .guide, .arrange .map-btn { opacity: .35; pointer-events: none; }
+/* أبو حفص (22 Nov): «شريط الذي يأتي مع التحريك لو نزلته إلى أسفل الشاشة»: while a piece is moved its words sit at the bottom, just
+   above its buttons (--pbh: their bar's height), smaller, and the top of the garden stays clear */
+.placing-free .place-bar { top: auto; bottom: calc(max(14px, env(safe-area-inset-bottom, 0px)) + 66px + var(--pbh, 74px)); padding: 6px 8px 6px 6px; gap: 8px; }
+.placing-free .place-bar svg { width: 32px; height: 32px; }
+.placing-free .place-bar b { font-size: 14px; line-height: 1.35; }
+.placing-free .place-bar .btn { min-height: 38px; font-size: 14px; padding: 4px 12px; }
 .place-bar b { flex: 1; font-size: 16px; line-height: 1.4; }
 .place-bar .btn { flex: none; min-height: 42px; font-size: 15px; padding: 6px 14px; }
 .inv-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 14px 0 6px; }
@@ -698,6 +704,10 @@ button:focus-visible, [role="button"]:focus-visible { outline: 3px solid #ffd54a
 .hut-p.drag { cursor: grabbing; filter: drop-shadow(0 4px 4px rgba(0, 0, 0, .35)); }
 .hut-drag .scroller { overflow-x: hidden; touch-action: none; }
 .hiding .slot, .hiding .well { pointer-events: none; }
+/* (22 Nov, evening) hiding: his own stones and tufts wobble to be chosen; the piece behind one shows only its edge */
+.hiding .deco.hide-cand { pointer-events: auto; cursor: pointer; }
+.hiding .deco.hide-cand .deco-pop { animation: arrangewob 1.2s ease-in-out infinite; transform-box: fill-box; transform-origin: 50% 100%; }
+.hide-peek { pointer-events: none; }
 .guide.nod .tilt, .guide.stand.nod .tilt { animation: nod .34s ease-in-out 4 alternate !important; }
 @keyframes nod { from { transform: rotate(0deg); } to { transform: rotate(-13deg); } }
 /* أبو حفص (22 Nov, evening): «حركة رأس ناصح عند الجواب الخاطئ لاتزال غير جيدة ... أريده أن يلف رأسه بالنفي لكن ليس لفا كاملا، يمكن أن
@@ -994,7 +1004,7 @@ const TEST_TOOLS = !API || new URLSearchParams(location.search).has('test');
 const SESSION_KEY = 'bustan-session';
 let session = null, syncTimer = null, pushing = false, updateWaiting = null;
 function isStudent() { return !!(session && session.user.role === 'student'); }
-const APP_VERSION = '2026.11.22.3';
+const APP_VERSION = '2026.11.22.4';
 const DEFAULTS = { leaves: LEAF_ORDER.length, opened: 1, stars: 0, plough: false, portionMax: 5, chainOne: 3, chainJoin: 3, reviewEvery: 1 };
 const SAMPLE = {};
 let settings = { ...DEFAULTS }, plots = {};
@@ -1126,6 +1136,7 @@ function drawPieces(gi) {
   signTexts = signTexts.filter((q) => q.g !== gi);
   (decor[gi] || []).forEach((_, i) => placePiece(gi, i, false));
   centerPlaques();
+  if (typeof drawHides === 'function') drawHides();
 }
 // where the grass is: the hill line of the garden (from the build), the piece's foot below it
 function groundAt(gi, x) { const t = GR(gi).top; if (!t) return ART.H * .5; return t[Math.max(0, Math.min(t.length - 1, Math.round(x / CMU / .25)))] * CMU; }
@@ -1164,6 +1175,7 @@ function buildSky(si) {
   const S = ART.skies[si]; skyNow = si; skyKey = '';
   $('skyImg').style.backgroundImage = `url("${S.img}")`;
   $('app').style.setProperty('--sky-a', S.top); $('app').style.setProperty('--sky-b', S.top);   // above the drawing on tall phones
+  const tc = document.querySelector('meta[name="theme-color"]'); if (tc && S.top) tc.setAttribute('content', S.top);   // (the phone's bar, the installed program)
   layoutSky(); para();
 }
 function layoutSky() {
@@ -1295,7 +1307,8 @@ function flowFall(F, parent, gi) {
       'stroke-dashoffset': (-Math.random() * 20).toFixed(1), style: `--t:${(.7 + Math.random() * .5).toFixed(2)}s;animation-delay:-${(Math.random()).toFixed(2)}s` }, flow);
   }
   // (the foam inside the water too: where it breaks on the ledge and at its foot)
-  [[.22, .97, 4.5], [.5, .98, 5.5], [.78, .97, 4.5], [.38, .55, 3], [.64, .55, 3]].forEach(([fx, fy, r], i) =>
+  // (أبو حفص, 22 Nov: «هناك دائرتان في وسط الشلال منظرها غير ملائم»: only at its foot)
+  [[.22, .97, 4.5], [.5, .98, 5.5], [.78, .97, 4.5]].forEach(([fx, fy, r], i) =>
     el('ellipse', { class: 'fall-foam', cx: (x + w * fx).toFixed(1), cy: (y + h * fy).toFixed(1), rx: r * 2, ry: r, fill: '#ffffff', opacity: .8, style: `animation-delay:-${(i * .37).toFixed(2)}s` }, flow));
 }
 function buildGarden(gi) {
@@ -4548,7 +4561,7 @@ function startPlacing(name, edit) {
   placing = { name, g: gi, i: edit ? edit.i : null, x, y, s: sc, el: el('g', { class: 'deco ghost' }, gds[gi].rings) };
   drawGhost();
   bar(edit ? `اسحب ${dname(name)} بإصبعك لتنقلها، وكبّرها أو صغّرها، ثم اضغط «ثبّتها»` : `اسحب ${dname(name)} بإصبعك إلى المكان الذي تحب، ثم اضغط «ثبّتها»`, name, edit ? 'إلغاء' : 'لاحقًا');
-  $('pieceBack').hidden = !edit; $('pieceBar').hidden = false; app.classList.add('placing-free');
+  $('pieceBack').hidden = !edit; $('pieceBar').hidden = false; app.classList.add('placing-free'); app.style.setProperty('--pbh', ($('pieceBar').offsetHeight + 8) + 'px');
 }
 function drawGhost() {
   const q = placing, P = pieceDef(q.name), g = q.el, [bx, by, bw, bh] = P.box, ok = pieceOk(q.g, q.x, q.y);
@@ -4600,7 +4613,7 @@ function startArrange() {
   placing = { arrange: true, g: gi }; bar('اضغط القطعة التي تريد نقلها أو تكبيرها أو إرجاعها إلى الخزانة', null, 'تم'); app.classList.add('arrange');
 }
 world.addEventListener('click', (e) => {
-  const d = e.target.closest('[data-piece]'); if (!d || VIEW_ONLY) return;
+  const d = e.target.closest('[data-piece]'); if (!d || VIEW_ONLY || app.classList.contains('hiding')) return;     // (hiding a piece behind it: smalls.js)
   if (placing ? !placing.arrange : hunt.on || bird.busy || !wEl.hidden || sheet.classList.contains('open')) return;
   e.stopPropagation(); const [g, i] = d.dataset.piece.split(':').map(Number); if (!decor[g] || !decor[g][i]) return;
   endPlacing(); startPlacing(decor[g][i].name, { g, i });
@@ -4669,7 +4682,7 @@ if (window.ResizeObserver) new ResizeObserver(() => requestAnimationFrame(onResi
 const fsBtn = $('goFull'), FS_IN = 'M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5', FS_OUT = 'M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5';
 const fsNow = () => document.fullscreenElement || document.webkitFullscreenElement || null;
 const INSTALLED = (window.matchMedia && matchMedia('(display-mode: fullscreen), (display-mode: standalone)').matches) || navigator.standalone === true;
-fsBtn.hidden = !(document.fullscreenEnabled || document.webkitFullscreenEnabled);
+fsBtn.hidden = INSTALLED || !(document.fullscreenEnabled || document.webkitFullscreenEnabled);
 // أبو حفص (22 Nov): «لماذا لا يمكن تثبيت البرنامج إلى الجوال؟»: where the browser offers it, ناصح offers to put the garden on the
 // phone's screen like an app (once a day, three times at most); opened from there it fills the screen by itself
 let installAsk = null;
@@ -4697,17 +4710,11 @@ fsBtn.addEventListener('click', async () => {
   } catch (e) { toast('هذا المتصفح لا يسمح بملء الشاشة هنا'); }
 });
 ['fullscreenchange', 'webkitfullscreenchange'].forEach((ev) => document.addEventListener(ev, () => { fsIcon(); onResize(); setTimeout(onResize, 350); }));
-// أبو حفص (22 Nov, evening): «بعد تثبيت البرنامج في وضع ملء الشاشة صار يظهر خطًا أبيض مع أنه في السابق كان يغطي الشاشة كلها»:
-// opened from its icon, the phone kept the strip of its clock (where the camera sits) for itself. The first touch asks for the
-// whole screen, as the button did in the browser (and again after the child leaves it, the next touch)
-// (his phone said it filled the screen when it did not: the first touch asks always, and the button stays, as in the browser)
-function coverAll() {
-  if (!INSTALLED || fsNow() || coverAll.asked) return;
-  coverAll.asked = true; setTimeout(() => { coverAll.asked = false; }, 4000);
-  const root = document.documentElement, ask = root.requestFullscreen || root.webkitRequestFullscreen; if (!ask) return;
-  try { const pr = ask.call(root, { navigationUI: 'hide' }); if (pr && pr.catch) pr.catch(() => {}); } catch (e) {}
-}
-if (INSTALLED) ['pointerup', 'touchend', 'keydown'].forEach((ev) => document.addEventListener(ev, coverAll, { capture: true, passive: true }));
+// أبو حفص (22 Nov, evening): «بعد تثبيت البرنامج في وضع ملء الشاشة صار يظهر خطًا أبيض»، ثم «لا يزال الخط الأبيض ظاهرا»، ثم: «لو صغر
+// الشاشة ثم عاد إليها فإنها لا تعود ملء الشاشة»: a program installed from Chrome on Android cannot yet draw where the phone's clock
+// and camera are (Chrome's own known limit, its fix not yet out; in a browser tab the whole screen works). So the installed program
+// opens as a window of its own (manifest «standalone»: no browser bar), the phone's clock bar coloured as its sky (theme-color, set
+// with the sky he chose), instead of a white or black strip; and it stays so when he leaves it and comes back
 size();
 // the child's garden opens (in the prototype at once; with accounts once the pupil has come in — boot(), at the end)
 function bootGarden() {
@@ -6246,7 +6253,7 @@ async function visitFriend(f) {
     if (visitFriend.changed) { visitFriend.changed = false; save(); invBadge(); }
     if (savedAt > syncedAt) queueSync(); setTimeout(() => { say(`رجعتَ إلى بستانك يا <b>${escA(GREET_NAME)}</b>.`); if (mail().length) mailSoon(4000); setTimeout(pollOrders, 1500); }, 400); }, true);
   if (giftHint) { giftHint = false; setTimeout(() => toast('اضغط «أهدِه» في الأعلى لتختار هديتك'), 600); }
-  if (visitHide && !visitHide.found) setTimeout(() => toast(`خبّأ ${f.name} قطعة تحت حجر أو عشب في ${isJG(visitHide.g) ? BST(visitHide.g) : 'بستانه ' + (ORDF[visitHide.g] || '')}! ارفعها واحدًا واحدًا حتى تجدها`, 5000), giftHint ? 3400 : 700);
+  if (visitHide && !visitHide.found) setTimeout(() => toast(`خبّأ ${f.name} قطعة خلف حجر أو عشب في ${isJG(visitHide.g) ? BST(visitHide.g) : 'بستانه ' + (ORDF[visitHide.g] || '')}، ويظهر طرفها قليلًا. انظر جيدًا، واضغطها حين تجدها!`, 5000), giftHint ? 3400 : 700);
 }
 $('visitGift').addEventListener('click', () => visitGift());
 $('visitMsg').addEventListener('click', () => {
@@ -7134,7 +7141,9 @@ function afterMove() {
     setTimeout(() => { if (GM.g === g) { GM.g = null; refreshSmalls(); } }, 12000);
     return;
   }
-  if (g.phase === 'left') { clearInterval(GM.timer); if (g.left !== GM.me) say(`خرج <b>${escA(g.n[g.left])}</b> من المسابقة.`); GM.g = null; refreshSmalls(); return; }
+  // (أبو حفص, 22 Nov: «اذا قطع أحدهم التحدي ... ثم خرج من البرنامج فإن البرنامج لا يعرف ويظل يقول إن الدور للمتسابق الذي خرج»: the
+  // server ends a game when one of the two has not been in it for 40 seconds — Code.gs chState)
+  if (g.phase === 'left') { clearInterval(GM.timer); say(g.left !== GM.me ? `خرج <b>${escA(g.n[g.left])}</b> من المسابقة${g.gone ? ' (غاب عنها)' : ''}، فانتهت.` : 'انتهت المسابقة لأنك غبت عنها.'); GM.g = null; refreshSmalls(); return; }
   if (g.phase === 'no') { clearInterval(GM.timer); if (GM.me === 0) say(`اعتذر <b>${escA(g.n[1])}</b> الآن. جرّب بعد قليل.`); GM.g = null; refreshSmalls(); return; }
   if (g.phase === 'steal' && g.turn === GM.me) say('امتلأت الشجرة بلا ثلاث متتالية! في دورك اختر تفاحة من تفاح زميلك، فإن أصبت صارت لك.');
   else if (g.turn === GM.me) toast('دورك: اختر تفاحة');
@@ -7371,6 +7380,20 @@ async function snapWorld(box, px, rect) {
   const S = ART.skies[garden.sky], sky = el('g', {}, out);
   el('rect', { x: x - 2, y: y - 2, width: w + 4, height: h + 4, fill: S.top || '#bfe3f5' }, sky);
   for (let t = Math.floor(x / ART.W) - 1; t <= Math.floor((x + w) / ART.W) + 1; t++) { const im = el('image', { x: t * ART.W, y: 0, width: ART.W, height: ART.H, preserveAspectRatio: 'none' }, sky); im.setAttribute('href', S.img); }
+  // (أبو حفص, 22 Nov: «عند تصوير لغز البزل لا يصور الشمس»: the sun and the clouds are not in the garden's drawing but on the sky
+  // behind it, where the screen shows them; they are put into the picture at those places)
+  const inv = st.getScreenCTM().inverse(), toW = (X, Y) => new DOMPoint(X, Y).matrixTransform(inv);
+  const place = (r) => { const a = toW(r.left, r.top), b = toW(r.right, r.bottom); return { x: a.x, y: a.y, w: b.x - a.x, h: b.y - a.y }; };
+  $('clouds').querySelectorAll('.cloud').forEach((c) => {
+    const r = c.getBoundingClientRect(); if (r.right < rect.left || r.left > rect.right || r.bottom < rect.top || r.top > rect.bottom) return;
+    const b = place(r), im = c.querySelector('img'), g = el('g', c.classList.contains('mirror') ? { transform: `translate(${(2 * b.x + b.w).toFixed(2)} 0) scale(-1 1)` } : {}, sky);
+    el('image', { x: b.x.toFixed(2), y: b.y.toFixed(2), width: b.w.toFixed(2), height: b.h.toFixed(2), preserveAspectRatio: 'none' }, g).setAttribute('href', im.getAttribute('src'));
+  });
+  const sun = $('sunSvg'), sr = sun.getBoundingClientRect();
+  if (!(sr.right < rect.left || sr.left > rect.right || sr.bottom < rect.top || sr.top > rect.bottom)) {
+    const b = place(sr), sv = sun.cloneNode(true); sv.removeAttribute('id'); sv.removeAttribute('class'); sv.removeAttribute('style');
+    ['x', 'y', 'width', 'height'].forEach((k, n) => sv.setAttribute(k, [b.x, b.y, b.w, b.h][n].toFixed(2))); sv.setAttribute('overflow', 'visible'); sky.appendChild(sv);
+  }
   out.appendChild(st.querySelector('defs').cloneNode(true));
   const W = el('g', {}, out);
   [...world.children].forEach((gd) => {
@@ -7494,73 +7517,82 @@ async function giftSend(name) {
   const i = ownState.inv.indexOf(name); if (i >= 0) ownState.inv.splice(i, 1); visitFriend.changed = true;
   closeModal(); toast(`أرسلتَ ${dname(name)} هدية إلى ${f.name}`);
 }
-// hiding a piece: he chooses it, then taps the place in his garden
+// hiding a piece. أبو حفص (22 Nov, evening): «رأيت أحجار وأعشابا كثيرة لا يمكن أن تتحرك ولم يحصل عليها الطالب. لتخبئة شيء ما
+// يشترط أن يكون لديه عشب أو حجر ويخبئه خلفه ويكون بحجم أصغر من الشيء الذي خبأه خلفه ويظهر جزء منه .. جاء الحجر فوق الشجرة»: no
+// stones of the program's own any more. He hides the piece behind one of his own stones or tufts of grass in his garden: drawn
+// smaller than it, behind it, a third of it showing above it. His classmates look for that edge, and tap it (or its stone)
+const isCover = (name) => /^(حجر|عشب|صخرة|سرخس)/.test(name || '');
+const coversIn = (g) => (decor && decor[g] || []).map((d, i) => ({ d, i })).filter((q) => isCover(q.d.name));
 function hidePick() {
   const list = giftable(inv);
   if (!list.length) { closeSheet(); return tell('تخبّئ قطعة من خزانتك، وخزانتك فارغة الآن. اشترِ قطعة من المتجر، ثم خبّئها.'); }
-  openSheet(`<h2 id="sheetTitle">خبّئ قطعة لزملائك</h2><div class="sub">اختر القطعة، ثم اضغط مكانها في بستانك. تبقى قطعتك معك، ومن وجدها من زملائك أخذ مثلها، ولك ٥ نقاط عن كل واحد يجدها، يومًا كاملًا.</div>
+  if (![...Array(NG).keys()].some((g) => gardenOpen(g) && coversIn(g).length)) { closeSheet(); return tell('تخبّئ القطعة خلف حجر أو عشب في بستانك، وليس في بساتينك حجر ولا عشب بعد. اشترِ حجرًا أو خصلة عشب من المتجر وضعها في بستانك، ثم خبّئ خلفها.'); }
+  openSheet(`<h2 id="sheetTitle">خبّئ قطعة لزملائك</h2><div class="sub">اختر القطعة، ثم اضغط الحجر أو العشب الذي تخبّئها خلفه في بستانك، ويظهر طرفها قليلًا. تبقى قطعتك معك، ومن وجدها من زملائك أخذ مثلها، ولك ٥ نقاط عن كل واحد يجدها، يومًا كاملًا.</div>
     ${pieceList(list, 'hidep')}<div class="row" style="margin-top:12px"><button class="btn light" data-act="close">إغلاق</button></div>`);
   body.querySelectorAll('svg[data-thumb]').forEach((q) => thumb(q, q.dataset.thumb));
 }
-// أبو حفص (22 Nov): «حين يخبئ أحد التلاميذ قطعة تظهر وتبان للطلبة الآخرين وهذا يفقد اللعبة متعتها وأيضا إذا كانت خلف نخلة لا يمكن
-// الضغط عليها .. يمكن أن نضع شرطا بأن يخبئ القطعة فقط خلف حجر أو عشب ... ويجتنب أشجار البستان»: the piece is not seen at all. It
-// lies under a stone or a tuft of grass on the grass between the palms, and three more stones and tufts stand about it in the same
-// garden; his classmates lift them one by one until they find it. They are drawn over everything in the garden, so each can be tapped
 let hiding = null;
 function hidePlace(name) {
   closeSheet(); hiding = { name };
-  if (aside(stopInfo(page()))) scrollToPage(stopOf(0));
-  bar('اضغط على العشب بين النخلات حيث تخبّئ القطعة', name, 'إلغاء'); app.classList.add('hiding');
+  const I = stopInfo(page()), here = !aside(I) && gardenOpen(I.g) && coversIn(I.g).length ? I.g : [...Array(NG).keys()].find((g) => gardenOpen(g) && coversIn(g).length);
+  if (here !== I.g || aside(I)) { const c = coversIn(here)[0]; scrollToSlotX(here, c.d.x); }
+  document.querySelectorAll('.deco.hide-cand').forEach((e) => e.classList.remove('hide-cand'));
+  [...Array(NG).keys()].forEach((g) => coversIn(g).forEach((c) => { const e = decoEls[g + ':' + c.i]; if (e) e.classList.add('hide-cand'); }));
+  bar('اضغط الحجر أو العشب الذي تخبّئ خلفه القطعة', name, 'إلغاء'); app.classList.add('hiding');
 }
-function hideDone() { hiding = null; app.classList.remove('hiding'); $('placeBar').hidden = true; app.classList.remove('placing'); }
+function hideDone() { hiding = null; app.classList.remove('hiding'); document.querySelectorAll('.deco.hide-cand').forEach((e) => e.classList.remove('hide-cand')); $('placeBar').hidden = true; app.classList.remove('placing'); }
 $('placeLater').addEventListener('click', () => { if (hiding) hideDone(); }, true);
-const nearPalm = (gi, x) => inGarden(gi).some((k) => holes[k] && Math.abs(holes[k].x - x) < 1.5 * CMU);
 world.addEventListener('click', async (e) => {
   if (!hiding) return;
   e.stopPropagation(); e.preventDefault();
-  const I = stopInfo(page()); if (aside(I)) return toast('اختر مكانًا في أحد بساتينك');
-  const gi = I.g, m = stageToGarden(gi, e.clientX, e.clientY);
-  if (!gardenOpen(gi) || m.y < groundAt(gi, m.x) + .5 * CMU || m.y > ART.H - .6 * CMU || m.x < .9 * CMU || m.x > ART.W - .9 * CMU) return toast('اضغط على العشب في بستان مفتوح');
-  if (nearPalm(gi, m.x)) return toast('بعيدًا عن النخلات والأشجار قليلًا');
+  const D = e.target.closest && e.target.closest('.deco.hide-cand');
+  if (!D) return toast('اضغط حجرًا أو خصلة عشب من بستانك');
+  const [gi, i] = D.dataset.piece.split(':').map(Number), d = decor[gi] && decor[gi][i];
+  if (!d || !gardenOpen(gi)) return toast('اضغط حجرًا أو خصلة عشب من بستانك');
   const h = hiding; hideDone();
-  try { const r = await api('hideSet', { piece: h.name, g: gi, x: m.x, y: m.y }); settings.hide = { id: r.id || '', piece: h.name, g: gi, x: +m.x.toFixed(1), y: +m.y.toFixed(1), until: r.until }; save(); drawHides(); }
+  try { const r = await api('hideSet', { piece: h.name, g: gi, x: d.x, y: d.y }); settings.hide = { id: r.id || '', piece: h.name, g: gi, x: +(+d.x).toFixed(1), y: +(+d.y).toFixed(1), until: r.until }; save(); drawHides(); }
   catch (er) { return tell(escA(er.message)); }
-  say(`خبّأتُ <b>${dname(h.name)}</b> تحت حجر أو عشب في <b>${BST(gi)}</b>، ووضعتُ حوله ثلاثة غيره ليحتار زملاؤك! يبقى التحدي يومًا كاملًا، ومن وجدها أخذ مثلها، ولك ٥ نقاط عن كل واحد.`);
+  say(`خبّأتُ <b>${dname(h.name)}</b> خلف ${escA(dname(d.name))} في <b>${BST(gi)}</b>، ويظهر طرفها قليلًا: من انتبه له من زملائك وجدها! يبقى التحدي يومًا كاملًا، ومن وجدها أخذ مثلها، ولك ٥ نقاط عن كل واحد.`);
 }, true);
-// the four stones and tufts: the same for him and for every classmate (drawn from the hiding place itself)
-const COVERS = ['حجر', 'حجر2', 'عشب', 'عشب2', 'عشب3'];
-function seeded(seed) { let h = 2166136261 >>> 0; String(seed).split('').forEach((c) => { h = Math.imul(h ^ c.charCodeAt(0), 16777619); }); return () => { h = Math.imul(h ^ (h >>> 15), 2246822507); h = Math.imul(h ^ (h >>> 13), 3266489909); h ^= h >>> 16; return (h >>> 0) / 4294967296; }; }
-function coversOf(H) {
-  const r = seeded(`${H.g}:${(+H.x).toFixed(1)}:${(+H.y).toFixed(1)}`), spots = [{ x: +H.x, y: +H.y, real: true }];
-  for (let t = 0; t < 300 && spots.length < 4; t++) {
-    const x = .9 * CMU + r() * (ART.W - 1.8 * CMU);
-    if (nearPalm(H.g, x) || spots.some((q) => Math.abs(q.x - x) < 2.4 * CMU)) continue;
-    const top = groundAt(H.g, x) + .7 * CMU; if (top > ART.H - 1 * CMU) continue;
-    spots.push({ x, y: top + r() * (ART.H - .8 * CMU - top), real: false });
-  }
-  spots.forEach((q) => { q.name = COVERS[Math.floor(r() * COVERS.length)]; });
-  return spots;
+// the stone or tuft it is behind: the one nearest the place it was hidden at (it follows it if he moved it a little)
+function coverAt(H) {
+  const list = coversIn(H.g); if (!list.length) return null;
+  const dist = (q) => Math.hypot(q.d.x - H.x, q.d.y - H.y);
+  return list.reduce((a, b) => (dist(a) <= dist(b) ? a : b));
 }
+const boxOf = (q) => { const C = pieceDef(q.d.name), k = C.s * (q.d.s || 1), b = C.box; return { x: q.d.x + b[0] * k, y: q.d.y + b[1] * k, w: b[2] * k, h: b[3] * k }; };
 let visitHide = null;
 function drawHides() {
-  document.querySelectorAll('.hide-layer').forEach((e) => e.remove());
+  document.querySelectorAll('.hide-layer, .hide-peek').forEach((e) => e.remove());
   const own = !VIEW_ONLY && settings.hide && settings.hide.until > Date.now() ? settings.hide : null, H = VIEW_ONLY ? visitHide : own;
   if (!H || !gds[H.g]) return;
-  const P = pieceDef(H.piece); if (!P) return;
+  const P = pieceDef(H.piece), cv = coverAt(H); if (!P || !cv) return;
+  const cEl = decoEls[H.g + ':' + cv.i]; if (!cEl) return;
+  // its size: smaller than the stone (at most three quarters of its height, four fifths of its width); its place: behind it, a
+  // little to one side, a third of it above the stone's top — found, beside it on the grass, in front
+  const B = boxOf(cv), pb = P.box, f = Math.min(.74 * B.h / (pb[3] * P.s), .8 * B.w / (pb[2] * P.s)), k = P.s * f, ph = pb[3] * k, pw = pb[2] * k;
+  const side = cv.i % 2 ? 1 : -1, mid = (pb[0] + pb[2] / 2) * k;
+  const x = H.found ? B.x + B.w / 2 + side * (B.w / 2 + pw / 2 + 3) - mid : B.x + B.w / 2 + side * B.w * .14 - mid;
+  const y = H.found ? cv.d.y - (pb[1] + pb[3]) * k : B.y - .34 * ph - pb[1] * k;
+  const pk = el('g', { class: 'hide-peek', transform: `translate(${x.toFixed(1)} ${y.toFixed(1)}) scale(${k.toFixed(4)})`, 'aria-hidden': 'true' });
+  useOf(P.ref, pk); cEl.parentNode.insertBefore(pk, H.found ? cEl.nextSibling : cEl);
+  if (!VIEW_ONLY || H.found) return;
+  // for the one looking: every stone and tuft of that garden answers a tap (and the edge that shows)
   const L = el('g', { class: 'hide-layer', transform: `translate(${offX(H.g).toFixed(2)} 0)` }, world);
-  coversOf(H).forEach((q) => {
-    const C = pieceDef(q.name); if (!C) return;
-    const g = el('g', { class: 'hide-cover', transform: `translate(${q.x.toFixed(1)} ${q.y.toFixed(1)})`, role: VIEW_ONLY && !H.found ? 'button' : 'img', 'aria-label': VIEW_ONLY ? 'حجر أو عشب: اضغطه لترى ما تحته' : 'مكان مخبّأ' }, L);
-    // the piece itself: beside its stone once found; to its owner, peeping out a little, so he knows which one it is
-    if (q.real && (H.found || !VIEW_ONLY)) { const pk = el('g', { transform: `translate(${H.found ? 22 : 9} 2) scale(${(P.s * .6).toFixed(3)})`, opacity: H.found ? 1 : .6 }, g); useOf(P.ref, pk); }
-    useOf(C.ref, el('g', { transform: `scale(${(C.s * 1.2).toFixed(3)})` }, g));
-    el('ellipse', { class: 'hide-hit', rx: 24, ry: 20, cy: -8, fill: 'transparent' }, g);
-    if (VIEW_ONLY && !H.found) g.addEventListener('click', (e) => { e.stopPropagation(); coverTap(q, g); });
+  coversIn(H.g).forEach((q) => {
+    const b = boxOf(q), real = q.i === cv.i;
+    const g = el('g', { class: 'hide-cover', role: 'button', 'aria-label': 'حجر أو عشب: هل خلفه القطعة؟' }, L);
+    el('rect', { class: 'hide-hit', x: (b.x - 4).toFixed(1), y: (b.y - (real ? .4 * ph : 4)).toFixed(1), width: (b.w + 8).toFixed(1), height: (b.h + (real ? .4 * ph : 4) + 2).toFixed(1), fill: 'transparent' }, g);
+    g.addEventListener('click', (e) => { e.stopPropagation(); coverTap(q, real); });
   });
 }
-async function coverTap(q, g) {
+async function coverTap(q, real) {
   const H = visitHide; if (!H || H.found) return;
-  if (!q.real) { g.classList.remove('no'); void g.getBoundingClientRect(); g.classList.add('no'); sound(false); return toast('ليس هنا! ارفع غيره'); }
+  if (!real) {
+    const e = decoEls[H.g + ':' + q.i], pop = e && e.querySelector('.deco-pop');
+    if (pop && !STILL) { pop.style.transformBox = 'fill-box'; pop.style.transformOrigin = '50% 100%'; pop.animate([{ transform: 'rotate(0)' }, { transform: 'rotate(-7deg)' }, { transform: 'rotate(6deg)' }, { transform: 'rotate(-3deg)' }, { transform: 'rotate(0)' }], { duration: 500 }); }
+    sound(false); return toast('ليس هنا! انظر جيدًا: طرف القطعة يظهر من خلف حجر أو عشب');
+  }
   await findHide();
 }
 async function findHide(e) {
