@@ -1,0 +1,637 @@
+/**
+ * بساتين الحفّاظ — الخادم
+ * يُلصق هذا الملف في محرّر Apps Script لجدول جوجل فارغ، ثم يُنشر «تطبيق ويب».
+ * فيه: الحسابات (المدير، المعلمون، التلاميذ)، وكلمات السر محفوظة مشفّرة لا تُقرأ، وبساتين التلاميذ،
+ * وما يرسله المعلم إلى تلميذه (الختم، الرسائل، الهدايا)، ورسائل الزملاء.
+ *
+ * الأوراق التي ينشئها بنفسه في الجدول أول مرة:
+ *   «الحسابات»: كل حساب في سطر (المدير، المعلمون، التلاميذ).
+ *   «البساتين»: بستان كل تلميذ كما حفظه جهازه آخر مرة.
+ *   «الرسائل»: ما أرسله المعلم أو الزملاء إلى التلميذ، حتى يصل إلى جهازه.
+ *   «النصائح»: النصائح التي تظهر للتلميذ أثناء التكرار (للجميع من المدير، ولكل حلقة من معلمها).
+ *   «الفوائد» و«الإجابات»: فائدة المعلم وسؤالها، ومن أجاب عنه وترتيبه ونقاطه.
+ *   «بنك الأسئلة»: أسئلة يتدرّب عليها التلاميذ ويتحدّى بها بعضهم بعضًا.
+ *   «التخبئة»: القطعة التي خبّأها التلميذ في بستانه ليجدها زملاؤه (يومًا واحدًا).
+ * لا تعدّل هذه الأوراق بيدك إلا عند الحاجة.
+ */
+
+const SHEET_USERS = 'الحسابات', SHEET_STATES = 'البساتين', SHEET_ORDERS = 'الرسائل';
+const H_USERS = ['id', 'role', 'username', 'name', 'teacherId', 'salt', 'hash', 'pv', 'created', 'lastSeen', 'active', 'summary', 'savedAt'];
+const H_STATES = ['id', 'savedAt', 'n'];
+const H_ORDERS = ['id', 'studentId', 'by', 'byName', 'type', 'data', 'status', 'created', 'done'];
+const CHUNK = 40000;              // a cell holds 50,000 letters: a large garden is kept in several cells of its row
+const TEACHER_ORDERS = ['grade', 'set', 'letter', 'plaque', 'gift', 'chest', 'hafiz', 'juz'];
+// the words a child may send a classmate (no free text between children)
+const FRIEND_WORDS = ['ما شاء الله، بستانك جميل!', 'بارك الله فيك، استمرّ في حفظك!', 'أحسنت! نخلاتك رائعة.', 'جزاك الله خيرًا يا صديقي.', 'هيا نتسابق في الحفظ!'];
+
+function doGet() { return out({ ok: true, app: 'بساتين الحفاظ' }); }
+
+function doPost(e) {
+  let q;
+  try { q = JSON.parse((e && e.postData && e.postData.contents) || '{}'); } catch (err) { return out({ ok: false, error: 'bad', message: 'طلب غير مفهوم' }); }
+  try {
+    ensure();
+    const f = ACTIONS[q.action];
+    if (!f) return out({ ok: false, error: 'bad', message: 'طلب غير معروف' });
+    return out(f(q));
+  } catch (err) {
+    if (err && err.code) return out({ ok: false, error: err.code, message: err.message });
+    return out({ ok: false, error: 'server', message: 'حدث خطأ في الخادم: ' + (err && err.message) });
+  }
+}
+function out(o) { return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON); }
+function fail(code, message) { const e = new Error(message); e.code = code; throw e; }
+
+// ---------- the sheets ----------
+function book() { return SpreadsheetApp.getActiveSpreadsheet(); }
+// every cell is kept as plain text: a name like 0123 stays 0123, and nothing written is taken for a date or a formula
+function sheet(name, head) {
+  const b = book(); let s = b.getSheetByName(name);
+  if (!s) { s = b.insertSheet(name); s.getRange(1, 1, s.getMaxRows(), s.getMaxColumns()).setNumberFormat('@'); s.getRange(1, 1, 1, head.length).setValues([head]); s.setFrozenRows(1); }
+  return s;
+}
+function ensure() { sheet(SHEET_USERS, H_USERS); sheet(SHEET_STATES, H_STATES); sheet(SHEET_ORDERS, H_ORDERS); }
+function rows(name, head) {
+  const s = sheet(name, head), n = s.getLastRow();
+  if (n < 2) return [];
+  const w = Math.max(head.length, s.getLastColumn());
+  return s.getRange(2, 1, n - 1, w).getValues().map((v, i) => { const o = { _row: i + 2, _cells: v }; head.forEach((h, j) => { o[h] = v[j]; }); return o; });
+}
+function setCells(name, head, row, obj) {
+  const s = sheet(name, head);
+  Object.keys(obj).forEach((k) => { const j = head.indexOf(k); if (j >= 0) s.getRange(row, j + 1).setNumberFormat('@').setValue(String(obj[k])); });
+}
+function append(name, head, obj) {
+  const s = sheet(name, head), row = s.getLastRow() + 1, vals = head.map((h) => (obj[h] == null ? '' : String(obj[h])));
+  s.getRange(row, 1, 1, vals.length).setNumberFormat('@').setValues([vals]);
+}
+function locked(fn) { const l = LockService.getScriptLock(); l.waitLock(20000); try { return fn(); } finally { l.releaseLock(); } }
+function newId(p) { return p + Date.now().toString(36) + Math.floor(Math.random() * 1e6).toString(36); }
+
+// ---------- passwords and keys ----------
+// (kept a few hours in the script's cache too: the program now asks every few seconds during the apples game, and reading the
+// script's properties each time would use up their daily allowance)
+function secret() {
+  const C = CacheService.getScriptCache(); let s = C.get('SECRET'); if (s) return s;
+  const P = PropertiesService.getScriptProperties(); s = P.getProperty('SECRET');
+  if (!s) { s = Utilities.getUuid() + Utilities.getUuid(); P.setProperty('SECRET', s); }
+  C.put('SECRET', s, 21600); return s;
+}
+function hex(bytes) { return bytes.map((b) => ('0' + (b & 255).toString(16)).slice(-2)).join(''); }
+function hashOf(salt, pass) { return hex(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, salt + '|' + pass, Utilities.Charset.UTF_8)); }
+function signOf(text) { return Utilities.base64EncodeWebSafe(Utilities.computeHmacSha256Signature(text, secret())).replace(/=+$/, ''); }
+function tokenFor(u) { const body = [u.id, u.pv || 1, Date.now()].join('.'); return body + '.' + signOf(body); }
+function userOf(token) {
+  const parts = String(token || '').split('.');
+  if (parts.length !== 4) fail('auth', 'سجّل الدخول من جديد');
+  const body = parts.slice(0, 3).join('.');
+  if (signOf(body) !== parts[3]) fail('auth', 'سجّل الدخول من جديد');
+  const u = rows(SHEET_USERS, H_USERS).find((r) => r.id === parts[0]);
+  if (!u || String(u.active) === 'false' || String(u.pv || 1) !== parts[1]) fail('auth', 'تغيّرت كلمة السر أو أُوقف الحساب، فسجّل الدخول من جديد');
+  return u;
+}
+function need(u, ...roles) { if (roles.indexOf(u.role) < 0) fail('denied', 'ليس هذا من صلاحيات حسابك'); }
+function normUser(v) { return String(v || '').replace(/\s+/g, '').toLowerCase(); }
+function checkNew(role, name, username, password) {
+  name = String(name || '').replace(/\s+/g, ' ').trim(); username = normUser(username); password = String(password || '');
+  if (name.length < 2 || name.length > 40 || /^[=+\-@]/.test(name)) fail('bad', 'اكتب الاسم (من حرفين إلى أربعين حرفًا)');
+  if (!/^[ء-يa-z0-9_.٠-٩]{3,24}$/.test(username)) fail('bad', 'اسم الدخول من ٣ إلى ٢٤ حرفًا أو رقمًا، بلا مسافات');
+  checkPass(role, password);
+  if (rows(SHEET_USERS, H_USERS).some((r) => normUser(r.username) === username)) fail('taken', 'اسم الدخول هذا مستعمل، فاختر غيره');
+  return { name, username, password };
+}
+function checkPass(role, p) {
+  const min = role === 'student' ? 4 : 6;
+  if (String(p || '').length < min || String(p).length > 40) fail('bad', `كلمة السر ${min === 4 ? 'أربعة' : 'ستة'} أحرف أو أرقام على الأقل`);
+}
+function publicUser(u, all) {
+  const o = { id: u.id, role: u.role, name: u.name, username: u.username, teacherId: u.teacherId || '' };
+  if (u.role === 'student') { const t = (all || rows(SHEET_USERS, H_USERS)).find((r) => r.id === u.teacherId); o.teacherName = t ? t.name : ''; }
+  return o;
+}
+function makeUser(role, v, teacherId) {
+  const salt = Utilities.getUuid(), u = { id: newId(role[0]), role, username: v.username, name: v.name, teacherId: teacherId || '', salt, hash: hashOf(salt, v.password), pv: 1,
+    created: Date.now(), lastSeen: '', active: true, summary: '', savedAt: '' };
+  append(SHEET_USERS, H_USERS, u); return u;
+}
+function setPass(u, password) {
+  const salt = Utilities.getUuid(), pv = (Number(u.pv) || 1) + 1;
+  setCells(SHEET_USERS, H_USERS, u._row, { salt, hash: hashOf(salt, password), pv });
+  u.pv = pv; return u;
+}
+
+// ---------- the gardens ----------
+function stateOf(id) {
+  const r = rows(SHEET_STATES, H_STATES).find((x) => x.id === id); if (!r) return { state: null, savedAt: 0 };
+  const n = Number(r.n) || 0, text = r._cells.slice(3, 3 + n).map((c) => String(c).slice(1)).join('');
+  let state = null; try { state = text ? JSON.parse(text) : null; } catch (e) { state = null; }
+  return { state, savedAt: Number(r.savedAt) || 0 };
+}
+function writeState(id, state, savedAt) {
+  const text = JSON.stringify(state), parts = [];
+  for (let i = 0; i < text.length; i += CHUNK) parts.push('~' + text.slice(i, i + CHUNK));      // (~: a piece never begins as a formula)
+  const s = sheet(SHEET_STATES, H_STATES), r = rows(SHEET_STATES, H_STATES).find((x) => x.id === id);
+  const row = r ? r._row : s.getLastRow() + 1;
+  if (r) s.getRange(row, 1, 1, Math.max(s.getLastColumn(), 3)).clearContent();
+  const vals = [id, savedAt, parts.length].concat(parts).map(String);
+  s.getRange(row, 1, 1, vals.length).setNumberFormat('@').setValues([vals]);
+}
+function pendingOf(studentId) {
+  return rows(SHEET_ORDERS, H_ORDERS).filter((o) => o.studentId === studentId && o.status === 'pending')
+    .map((o) => ({ id: o.id, by: o.byName, created: o.created, o: JSON.parse(o.data || '{}') }));
+}
+// rows taken out of a sheet (from the bottom up, so the rows above keep their numbers)
+function dropRows(name, head, test) {
+  const s = sheet(name, head), list = rows(name, head).filter(test).map((r) => r._row).sort((a, b) => b - a);
+  list.forEach((n) => s.deleteRow(n));
+  return list.length;
+}
+// a pupil deleted: his account, his garden, and what was sent to him or by him
+function dropStudent(id) {
+  dropRows(SHEET_STATES, H_STATES, (r) => r.id === id);
+  dropRows(SHEET_ORDERS, H_ORDERS, (r) => r.studentId === id || r.by === id);
+  dropRows(SHEET_USERS, H_USERS, (r) => r.id === id);
+}
+function summaryOf(u) { try { return u.summary ? JSON.parse(u.summary) : null; } catch (e) { return null; } }
+function studentRow(u, all, orders) {
+  return { id: u.id, name: u.name, username: u.username, summary: summaryOf(u), savedAt: Number(u.savedAt) || 0, lastSeen: u.lastSeen || '',
+    pending: orders.filter((o) => o.studentId === u.id && o.status === 'pending').length, teacherId: u.teacherId };
+}
+function myStudent(u, id, all) {
+  const s = (all || rows(SHEET_USERS, H_USERS)).find((r) => r.id === id && r.role === 'student');
+  if (!s) fail('missing', 'لم أجد هذا التلميذ');
+  if (u.role === 'teacher' && s.teacherId !== u.id) fail('denied', 'هذا التلميذ ليس في حلقتك');
+  return s;
+}
+
+// ---------- what the program asks ----------
+const ACTIONS = {
+  status() { return { ok: true, hasAdmin: rows(SHEET_USERS, H_USERS).some((r) => r.role === 'admin') }; },
+
+  // the first account: the director's (only while there is none)
+  setup(q) {
+    return locked(() => {
+      if (rows(SHEET_USERS, H_USERS).some((r) => r.role === 'admin')) fail('denied', 'حساب المدير موجود من قبل');
+      const u = makeUser('admin', checkNew('admin', q.name, q.username, q.password));
+      return { ok: true, token: tokenFor(u), user: publicUser(u) };
+    });
+  },
+
+  login(q) {
+    const name = normUser(q.username), cache = CacheService.getScriptCache(), key = 'fail:' + name;
+    const fails = Number(cache.get(key) || 0);
+    if (fails >= 6) fail('locked', 'أخطأت كلمة السر مرات كثيرة، فانتظر ربع ساعة ثم حاول');
+    const all = rows(SHEET_USERS, H_USERS), u = all.find((r) => normUser(r.username) === name);
+    if (!u || String(u.active) === 'false' || hashOf(u.salt, String(q.password || '')) !== u.hash) {
+      cache.put(key, String(fails + 1), 900);
+      fail('wrong', 'اسم الدخول أو كلمة السر غير صحيحة');
+    }
+    cache.remove(key);
+    setCells(SHEET_USERS, H_USERS, u._row, { lastSeen: Date.now() });
+    return { ok: true, token: tokenFor(u), user: publicUser(u, all) };
+  },
+
+  me(q) { const u = userOf(q.token); return { ok: true, user: publicUser(u) }; },
+
+  changePassword(q) {
+    return locked(() => {
+      const u = userOf(q.token);
+      if (hashOf(u.salt, String(q.old || '')) !== u.hash) fail('wrong', 'كلمة السر الحالية غير صحيحة');
+      checkPass(u.role, q.password); setPass(u, String(q.password));
+      return { ok: true, token: tokenFor(u) };
+    });
+  },
+
+  // the director adds the teachers, a teacher adds his pupils
+  addTeacher(q) {
+    return locked(() => { const u = userOf(q.token); need(u, 'admin');
+      const t = makeUser('teacher', checkNew('teacher', q.name, q.username, q.password)); return { ok: true, user: publicUser(t) }; });
+  },
+  addStudent(q) {
+    return locked(() => { const u = userOf(q.token); need(u, 'teacher');
+      const s = makeUser('student', checkNew('student', q.name, q.username, q.password), u.id); return { ok: true, user: publicUser(s) }; });
+  },
+  // a lost password: the director gives a teacher a new one, a teacher his pupil
+  resetPassword(q) {
+    return locked(() => {
+      const u = userOf(q.token), all = rows(SHEET_USERS, H_USERS), t = all.find((r) => r.id === q.userId);
+      if (!t) fail('missing', 'لم أجد هذا الحساب');
+      if (u.role === 'admin' && t.role !== 'teacher') fail('denied', 'المدير يغيّر كلمات سر المعلمين، والمعلم يغيّر كلمات سر تلاميذه');
+      if (u.role === 'teacher' && !(t.role === 'student' && t.teacherId === u.id)) fail('denied', 'هذا التلميذ ليس في حلقتك');
+      if (u.role === 'student') fail('denied', 'ليس هذا من صلاحيات حسابك');
+      checkPass(t.role, q.password); setPass(t, String(q.password));
+      return { ok: true };
+    });
+  },
+  // أبو حفص (16 Nov): «أريد إضافة زر لحذف طالب، وزر لحذف معلم». A teacher deletes his pupil: his account, his garden and
+  // what waits for him. The director deletes a teacher: his pupils go to another teacher, or are deleted with him
+  deleteStudent(q) {
+    return locked(() => {
+      const u = userOf(q.token); need(u, 'teacher');
+      const s = myStudent(u, q.userId); dropStudent(s.id);
+      return { ok: true };
+    });
+  },
+  deleteTeacher(q) {
+    return locked(() => {
+      const u = userOf(q.token); need(u, 'admin');
+      const all = rows(SHEET_USERS, H_USERS), t = all.find((r) => r.id === q.userId && r.role === 'teacher');
+      if (!t) fail('missing', 'لم أجد هذا المعلم');
+      const pupils = all.filter((r) => r.role === 'student' && r.teacherId === t.id);
+      let moved = 0, dropped = 0;
+      if (pupils.length && q.moveTo) {
+        const to = all.find((r) => r.id === q.moveTo && r.role === 'teacher' && r.id !== t.id);
+        if (!to) fail('missing', 'لم أجد المعلم الذي تنقل إليه التلاميذ');
+        pupils.forEach((p) => setCells(SHEET_USERS, H_USERS, p._row, { teacherId: to.id })); moved = pupils.length;
+      } else if (pupils.length && q.withPupils) { pupils.forEach((p) => dropStudent(p.id)); dropped = pupils.length; }
+      else if (pupils.length) fail('bad', 'اختر ما يكون لتلاميذه: تنقلهم إلى معلم آخر، أو تحذفهم معه');
+      dropRows(SHEET_USERS, H_USERS, (r) => r.id === t.id);
+      return { ok: true, moved, dropped };
+    });
+  },
+  rename(q) {
+    return locked(() => {
+      const u = userOf(q.token), all = rows(SHEET_USERS, H_USERS), t = all.find((r) => r.id === q.userId);
+      if (!t) fail('missing', 'لم أجد هذا الحساب');
+      if (!((u.role === 'admin' && t.role === 'teacher') || (u.role === 'teacher' && t.role === 'student' && t.teacherId === u.id))) fail('denied', 'ليس هذا من صلاحيات حسابك');
+      const name = String(q.name || '').replace(/\s+/g, ' ').trim(); if (name.length < 2 || name.length > 40 || /^[=+\-@]/.test(name)) fail('bad', 'اكتب الاسم (من حرفين إلى أربعين حرفًا)');
+      setCells(SHEET_USERS, H_USERS, t._row, { name }); return { ok: true };
+    });
+  },
+
+  listTeachers(q) {
+    const u = userOf(q.token); need(u, 'admin');
+    const all = rows(SHEET_USERS, H_USERS), orders = rows(SHEET_ORDERS, H_ORDERS);
+    return { ok: true, teachers: all.filter((r) => r.role === 'teacher').map((t) => {
+      const st = all.filter((r) => r.role === 'student' && r.teacherId === t.id);
+      return { id: t.id, name: t.name, username: t.username, lastSeen: t.lastSeen || '', students: st.length,
+        wait: st.reduce((n, s) => n + ((summaryOf(s) || {}).wait || 0), 0), active: String(t.active) !== 'false' };
+    }) };
+  },
+  listStudents(q) {
+    const u = userOf(q.token); need(u, 'admin', 'teacher');
+    const tid = u.role === 'teacher' ? u.id : q.teacherId, all = rows(SHEET_USERS, H_USERS), orders = rows(SHEET_ORDERS, H_ORDERS);
+    const t = all.find((r) => r.id === tid);
+    return { ok: true, teacher: t ? { id: t.id, name: t.name } : null,
+      students: all.filter((r) => r.role === 'student' && r.teacherId === tid).map((s) => studentRow(s, all, orders)) };
+  },
+  studentState(q) {
+    const u = userOf(q.token); need(u, 'admin', 'teacher');
+    const all = rows(SHEET_USERS, H_USERS), s = myStudent(u, q.studentId, all), st = stateOf(s.id);
+    return { ok: true, student: { id: s.id, name: s.name, username: s.username }, state: st.state, savedAt: st.savedAt, orders: pendingOf(s.id) };
+  },
+
+  // the pupil's own garden: kept on his device, and here, so it comes back on another device and his teacher sees it
+  myState(q) {
+    const u = userOf(q.token); need(u, 'student');
+    const st = stateOf(u.id); setCells(SHEET_USERS, H_USERS, u._row, { lastSeen: Date.now() });
+    return { ok: true, state: st.state, savedAt: st.savedAt, orders: pendingOf(u.id), tips: tipsFor(u), faida: faidaFor(u), bank: bankFor(u) };
+  },
+  saveState(q) {
+    return locked(() => {
+      const u = userOf(q.token); need(u, 'student');
+      const savedAt = Number(q.savedAt) || Date.now(), cur = stateOf(u.id);
+      // his garden changed on another device since this one last took it from here: it is sent back, and this device
+      // keeps whichever has the newer work in it (base: the time of the garden this device last took or sent)
+      if (q.base != null && cur.savedAt && Number(q.base) < cur.savedAt) return { ok: true, conflict: true, state: cur.state, savedAt: cur.savedAt };
+      if (cur.savedAt && savedAt < cur.savedAt) return { ok: true, stale: true, savedAt: cur.savedAt };     // a newer one is kept
+      if (!q.state || typeof q.state !== 'object') fail('bad', 'لا بستان في الطلب');
+      writeState(u.id, q.state, savedAt);
+      setCells(SHEET_USERS, H_USERS, u._row, { summary: JSON.stringify(q.summary || {}), savedAt, lastSeen: Date.now() });
+      return { ok: true, savedAt };
+    });
+  },
+  myOrders(q) { const u = userOf(q.token); need(u, 'student'); return { ok: true, orders: pendingOf(u.id), faida: faidaFor(u) }; },
+  ackOrders(q) {
+    return locked(() => {
+      const u = userOf(q.token); need(u, 'student'); const ids = q.ids || [], now = Date.now();
+      rows(SHEET_ORDERS, H_ORDERS).filter((o) => o.studentId === u.id && ids.indexOf(o.id) >= 0 && o.status === 'pending')
+        .forEach((o) => setCells(SHEET_ORDERS, H_ORDERS, o._row, { status: 'done', done: now }));
+      return { ok: true };
+    });
+  },
+
+  // what the teacher sends his pupil: it waits here until the pupil's device takes it
+  addOrder(q) {
+    return locked(() => {
+      const u = userOf(q.token); need(u, 'teacher'); const s = myStudent(u, q.studentId), o = q.o || {};
+      if (TEACHER_ORDERS.indexOf(o.t) < 0) fail('bad', 'طلب غير معروف');
+      if (o.t === 'letter') { o.text = String(o.text || '').slice(0, 140); o.by = u.name; }
+      if (o.t === 'juz') { o.juz = Math.floor(Number(o.juz)); if (!(o.juz >= 1 && o.juz <= 29)) fail('bad', 'اختر الجزء'); o.grade = o.grade === 'جيد' ? 'جيد' : 'متقن'; }
+      if (o.t === 'hafiz') { o.upto = Math.max(0, Math.min(60, Math.floor(Number(o.upto) || 0))); o.grade = o.grade === 'جيد' ? 'جيد' : 'متقن'; }
+      const id = newId('o');
+      append(SHEET_ORDERS, H_ORDERS, { id, studentId: s.id, by: u.id, byName: u.name, type: o.t, data: JSON.stringify(o), status: 'pending', created: Date.now(), done: '' });
+      return { ok: true, id };
+    });
+  },
+  cancelOrder(q) {
+    return locked(() => {
+      const u = userOf(q.token); need(u, 'teacher');
+      const o = rows(SHEET_ORDERS, H_ORDERS).find((r) => r.id === q.id && r.by === u.id);
+      if (!o) fail('missing', 'لم أجد هذا الطلب');
+      if (o.status !== 'pending') fail('late', 'وصل هذا إلى جهاز التلميذ، فلا يمكن التراجع عنه');
+      setCells(SHEET_ORDERS, H_ORDERS, o._row, { status: 'cancelled', done: Date.now() });
+      return { ok: true };
+    });
+  },
+
+  // classmates: the pupils of the same teacher visit one another's gardens, and leave a word of encouragement
+  classmates(q) {
+    const u = userOf(q.token); need(u, 'student'); const all = rows(SHEET_USERS, H_USERS);
+    const hides = activeHides();
+    return { ok: true, words: FRIEND_WORDS, classmates: all.filter((r) => r.role === 'student' && r.teacherId === u.teacherId && r.id !== u.id && String(r.active) !== 'false')
+      .map((r) => { const h = hides.find((x) => x.studentId === r.id); return { id: r.id, name: r.name, summary: summaryOf(r), hide: h ? { found: foundOf(h).indexOf(u.id) >= 0 } : null }; }) };
+  },
+  visitState(q) {
+    const u = userOf(q.token); need(u, 'student');
+    const s = rows(SHEET_USERS, H_USERS).find((r) => r.id === q.studentId && r.role === 'student');
+    if (!s || s.teacherId !== u.teacherId) fail('denied', 'هذا البستان ليس لزميل في حلقتك');
+    const h = activeHides().find((x) => x.studentId === s.id);
+    return { ok: true, student: { id: s.id, name: s.name }, state: stateOf(s.id).state,
+      hide: h ? { id: h.id, piece: h.piece, g: Number(h.g), x: Number(h.x), y: Number(h.y), found: foundOf(h).indexOf(u.id) >= 0 } : null };
+  },
+  sendMsg(q) {
+    return locked(() => {
+      const u = userOf(q.token); need(u, 'student');
+      const s = rows(SHEET_USERS, H_USERS).find((r) => r.id === q.to && r.role === 'student');
+      if (!s || s.teacherId !== u.teacherId || s.id === u.id) fail('denied', 'هذا ليس زميلًا في حلقتك');
+      const text = FRIEND_WORDS[Number(q.word)]; if (!text) fail('bad', 'اختر رسالة من الرسائل');
+      const today = new Date().toISOString().slice(0, 10);   // (a day by UTC)
+      if (rows(SHEET_ORDERS, H_ORDERS).some((o) => o.by === u.id && o.studentId === s.id && o.type === 'msg' && new Date(Number(o.created)).toISOString().slice(0, 10) === today))
+        fail('late', 'أرسلت إلى زميلك رسالة اليوم، فأرسل غيرها غدًا');
+      append(SHEET_ORDERS, H_ORDERS, { id: newId('o'), studentId: s.id, by: u.id, byName: u.name, type: 'msg', data: JSON.stringify({ t: 'msg', from: u.name, text }),
+        status: 'pending', created: Date.now(), done: '' });
+      return { ok: true };
+    });
+  },
+};
+
+// ---------- أبو حفص (21 Nov): the tips, the teacher's fa'ida and its question, the bank of questions, gifts between
+// classmates, a piece hidden for them to find, and the apples game ----------
+const SHEET_TIPS = 'النصائح', SHEET_FAIDA = 'الفوائد', SHEET_ANS = 'الإجابات', SHEET_BANK = 'بنك الأسئلة', SHEET_HIDE = 'التخبئة';
+const H_TIPS = ['id', 'teacherId', 'byName', 'text', 'created'];
+const H_FAIDA = ['id', 'teacherId', 'text', 'question', 'correct', 'wrong1', 'wrong2', 'created'];
+const H_ANS = ['faidaId', 'studentId', 'name', 'ok', 'rank', 'points', 'at'];
+const H_BANK = ['id', 'teacherId', 'question', 'correct', 'wrong1', 'wrong2', 'created'];
+const H_HIDE = ['id', 'studentId', 'name', 'teacherId', 'piece', 'g', 'x', 'y', 'created', 'found'];
+const FAIDA_POINTS = [10, 7, 5], FAIDA_MORE = 3;       // the first, the second, the third, then each who answers rightly
+const HIDE_POINTS = 5, HIDE_HOURS = 24;
+// the tips the sheet starts with (the director may change or delete any of them, and add others)
+const DEFAULT_TIPS = ['لا تضجر من كثرة التكرار، فإن بكل حرف حسنة.', 'التكرار يقوّي الحفظ ويمنعه من الفرار.', 'أطيب الأزمان ما كان في تلاوة القرآن.',
+  'من أحب القرآن فإنه يحب الله ورسوله.', 'خيركم من تعلّم القرآن وعلّمه.', 'اقرأ بصوت مسموع، فأذنك تحفظ مع عينيك.', 'ركّز في الآية التي تكرّرها، وتخيّل معناها.',
+  'احفظ من مصحف واحد دائمًا، فتتذكر عينك مكان الآية.', 'كرّر الآية حتى تقرأها دون أن تنظر.', 'الحافظ الماهر بالقرآن مع السفرة الكرام البررة.',
+  'يقال لصاحب القرآن: اقرأ وارتقِ ورتّل.', 'القرآن يأتي يوم القيامة شفيعًا لأصحابه.', 'اقرأ ما حفظت في صلاتك، فهذه أجمل مراجعة.',
+  'من صبر على التكرار نال الحفظ المتين.', 'اجعل لحفظك وقتًا ثابتًا كل يوم.', 'الحفظ في الصباح الباكر أثبت.', 'تمهّل في القراءة، فالترتيل زينة القرآن.',
+  'إذا تعبت فتنفّس قليلًا، ثم أكمل بنشاط.', 'احرص على صحة الحروف ومخارجها.', 'ما حفظته اليوم راجعه غدًا حتى يثبت.', 'أنت تبني بستانك في الجنة بكل آية تحفظها.',
+  'سمّع لوالديك ما حفظت، ففي ذلك برّ وفرح لهما.', 'ادعُ الله أن يفتح عليك في الحفظ.', 'كل تكرار يقرّبك من الإتقان.', 'أحسن الاستماع للشيخ، ثم قلّده في قراءته.',
+  'القليل الدائم خير من الكثير المنقطع.', 'اجعل نيتك في الحفظ لله تعالى.', 'الملائكة تحفّ مجالس القرآن.', 'تذكّر: بكل حرف حسنة، والحسنة بعشر أمثالها.',
+  'استمر، فأنت على طريق الحفّاظ.'];
+function cleanText(v, max) { v = String(v == null ? '' : v).replace(/\s+/g, ' ').trim().slice(0, max); return /^[=+\-@]/.test(v) ? '‏' + v : v; }
+const dayOf = (t) => new Date(Number(t) || 0).toISOString().slice(0, 10);
+function classmate(u, id) {
+  const s = rows(SHEET_USERS, H_USERS).find((r) => r.id === id && r.role === 'student');
+  if (!s || s.teacherId !== u.teacherId || s.id === u.id) fail('denied', 'هذا ليس زميلًا في حلقتك');
+  return s;
+}
+function shuffled(arr, seed) {
+  let h = 7; String(seed).split('').forEach((c) => { h = (Math.imul(h, 31) + c.charCodeAt(0)) >>> 0; });
+  const a = arr.slice(); for (let i = a.length - 1; i > 0; i--) { h = (Math.imul(h, 1103515245) + 12345) >>> 0; const j = h % (i + 1); const t = a[i]; a[i] = a[j]; a[j] = t; }
+  return a;
+}
+// the tips: the sheet is made with the starting tips the first time it is needed
+function tipRows() {
+  const fresh = !book().getSheetByName(SHEET_TIPS), s = sheet(SHEET_TIPS, H_TIPS);
+  if (fresh) { const now = String(Date.now()); s.getRange(2, 1, DEFAULT_TIPS.length, H_TIPS.length).setNumberFormat('@').setValues(DEFAULT_TIPS.map((t, i) => ['n0' + i, '', 'المدير', t, now])); }
+  return rows(SHEET_TIPS, H_TIPS);
+}
+function tipsFor(u) { return tipRows().filter((r) => !r.teacherId || r.teacherId === u.teacherId).map((r) => String(r.text)).filter(Boolean); }
+function bankFor(u) { return rows(SHEET_BANK, H_BANK).filter((r) => !r.teacherId || r.teacherId === u.teacherId).slice(-300).map((r) => [r.question, r.correct, r.wrong1, r.wrong2].map(String)); }
+// the teacher's latest fa'ida is the one his pupils see; with it the names of the first five who answered it rightly
+function faidaOf(teacherId) { const list = rows(SHEET_FAIDA, H_FAIDA).filter((r) => r.teacherId === teacherId); return list.length ? list[list.length - 1] : null; }
+const isOk = (a) => String(a.ok) === 'true';
+function topOf(ans) { return ans.filter(isOk).sort((a, b) => Number(a.rank) - Number(b.rank)).slice(0, 5).map((a) => String(a.name)); }
+function faidaFor(u) {
+  const f = faidaOf(u.teacherId); if (!f) return null;
+  const ans = rows(SHEET_ANS, H_ANS).filter((a) => a.faidaId === f.id), mine = ans.find((a) => a.studentId === u.id);
+  return { id: f.id, text: f.text, question: f.question, answers: shuffled([f.correct, f.wrong1, f.wrong2].map(String), f.id), created: Number(f.created) || 0,
+    top: topOf(ans), mine: mine ? { right: isOk(mine), rank: Number(mine.rank) || 0, points: Number(mine.points) || 0, correct: String(f.correct) } : null };
+}
+function canEdit(u, r) { return u.role === 'admin' || (u.role === 'teacher' && r.teacherId === u.id); }
+// a piece hidden in a pupil's garden: for a day; found: the classmates who found it
+function activeHides() { const now = Date.now(); return rows(SHEET_HIDE, H_HIDE).filter((h) => now - Number(h.created) < HIDE_HOURS * 3600e3); }
+function foundOf(h) { try { return JSON.parse(h.found || '[]'); } catch (e) { return []; } }
+function order(studentId, by, o) {
+  append(SHEET_ORDERS, H_ORDERS, { id: newId('o'), studentId, by: by.id, byName: by.name, type: o.t, data: JSON.stringify(o), status: 'pending', created: Date.now(), done: '' });
+}
+// the apples game: who is in the program now (per halaqa), the invitations and the games, kept a short while in the cache
+const CH_TTL = 1800;
+function cch() { return CacheService.getScriptCache(); }
+function cget(k) { const v = cch().get(k); if (!v) return null; try { return JSON.parse(v); } catch (e) { return null; } }
+function cput(k, v, s) { cch().put(k, JSON.stringify(v), s || CH_TTL); }
+const LINES = [[0, 1, 2], [3, 4, 5], [6, 7, 8], [0, 3, 6], [1, 4, 7], [2, 5, 8], [0, 4, 8], [2, 4, 6]];   // rows, columns, and the two slants
+function lineOf(b) { for (let i = 0; i < LINES.length; i++) { const L = LINES[i]; if (b[L[0]] && b[L[0]] === b[L[1]] && b[L[0]] === b[L[2]]) return L; } return null; }
+function myGame(u, gid) { const g = gid ? cget('G:' + gid) : null; if (!g || g.p.indexOf(u.id) < 0) fail('late', 'انتهت هذه المسابقة'); return g; }
+function endGame(g) { g.p.forEach((id) => { if (cch().get('M:' + id) === g.id) cch().remove('M:' + id); }); }
+
+Object.assign(ACTIONS, {
+  // tips: the director's are for every halaqa (and he may change any tip); a teacher's for his pupils
+  tipsList(q) {
+    const u = userOf(q.token); need(u, 'admin', 'teacher'); const users = rows(SHEET_USERS, H_USERS);
+    const nameOf = (id) => (users.find((r) => r.id === id) || {}).name || '';
+    return { ok: true, tips: tipRows().filter((t) => u.role === 'admin' || !t.teacherId || t.teacherId === u.id)
+      .map((t) => ({ id: t.id, text: t.text, mine: canEdit(u, t), who: t.teacherId ? nameOf(t.teacherId) : 'للجميع' })) };
+  },
+  tipSave(q) {
+    return locked(() => {
+      const u = userOf(q.token); need(u, 'admin', 'teacher'); const text = cleanText(q.text, 150);
+      if (text.length < 4) fail('bad', 'اكتب النصيحة (١٥٠ حرفًا على الأكثر)');
+      if (q.id) {
+        const t = tipRows().find((r) => r.id === q.id); if (!t) fail('missing', 'لم أجد هذه النصيحة');
+        if (!canEdit(u, t)) fail('denied', 'هذه النصيحة للجميع، يعدّلها المدير'); setCells(SHEET_TIPS, H_TIPS, t._row, { text }); return { ok: true };
+      }
+      tipRows(); append(SHEET_TIPS, H_TIPS, { id: newId('n'), teacherId: u.role === 'admin' ? '' : u.id, byName: u.name, text, created: Date.now() });
+      return { ok: true };
+    });
+  },
+  tipDelete(q) {
+    return locked(() => {
+      const u = userOf(q.token); need(u, 'admin', 'teacher'); const t = tipRows().find((r) => r.id === q.id);
+      if (!t) fail('missing', 'لم أجد هذه النصيحة'); if (!canEdit(u, t)) fail('denied', 'هذه النصيحة للجميع، يحذفها المدير');
+      dropRows(SHEET_TIPS, H_TIPS, (r) => r.id === t.id); return { ok: true };
+    });
+  },
+  // the teacher's fa'ida and its question: the newest is the one his pupils see
+  faidaSet(q) {
+    return locked(() => {
+      const u = userOf(q.token); need(u, 'teacher');
+      const v = { text: cleanText(q.text, 400), question: cleanText(q.question, 160), correct: cleanText(q.correct, 80), wrong1: cleanText(q.wrong1, 80), wrong2: cleanText(q.wrong2, 80) };
+      if (v.text.length < 5) fail('bad', 'اكتب الفائدة'); if (v.question.length < 4) fail('bad', 'اكتب السؤال');
+      if (!v.correct || !v.wrong1 || !v.wrong2) fail('bad', 'اكتب الجواب الصحيح وجوابين خطأين');
+      if (v.correct === v.wrong1 || v.correct === v.wrong2 || v.wrong1 === v.wrong2) fail('bad', 'اجعل الأجوبة الثلاثة مختلفة');
+      const id = newId('f'); append(SHEET_FAIDA, H_FAIDA, Object.assign({ id, teacherId: u.id, created: Date.now() }, v));
+      return { ok: true, id };
+    });
+  },
+  faidaMine(q) {
+    const u = userOf(q.token); need(u, 'teacher'); const f = faidaOf(u.id);
+    if (!f) return { ok: true, faida: null, answers: [] };
+    const ans = rows(SHEET_ANS, H_ANS).filter((a) => a.faidaId === f.id).map((a) => ({ name: a.name, right: isOk(a), rank: Number(a.rank) || 0, points: Number(a.points) || 0, at: Number(a.at) || 0 }));
+    return { ok: true, faida: { id: f.id, text: f.text, question: f.question, correct: f.correct, wrong1: f.wrong1, wrong2: f.wrong2, created: Number(f.created) || 0 }, answers: ans };
+  },
+  // one answer for each pupil: the first to answer rightly gets 10 points, the second 7, the third 5, then 3 each
+  faidaAnswer(q) {
+    return locked(() => {
+      const u = userOf(q.token); need(u, 'student'); const f = faidaOf(u.teacherId);
+      if (!f || f.id !== q.id) fail('late', 'كتب شيخك فائدة أحدث، فاقرأها');
+      const ans = rows(SHEET_ANS, H_ANS).filter((a) => a.faidaId === f.id), was = ans.find((a) => a.studentId === u.id);
+      if (was) return { ok: true, again: true, right: isOk(was), rank: Number(was.rank) || 0, points: Number(was.points) || 0, correct: String(f.correct), top: topOf(ans) };
+      const right = String(q.answer) === String(f.correct), rank = right ? ans.filter(isOk).length + 1 : 0, points = right ? (FAIDA_POINTS[rank - 1] || FAIDA_MORE) : 0;
+      const row = { faidaId: f.id, studentId: u.id, name: u.name, ok: right, rank, points, at: Date.now() };
+      append(SHEET_ANS, H_ANS, row);
+      return { ok: true, right, rank, points, correct: String(f.correct), top: topOf(ans.concat([row])) };
+    });
+  },
+  // the bank of questions: the director's for everyone, a teacher's for his halaqa
+  bankList(q) {
+    const u = userOf(q.token); need(u, 'admin', 'teacher'); const users = rows(SHEET_USERS, H_USERS);
+    return { ok: true, list: rows(SHEET_BANK, H_BANK).filter((r) => u.role === 'admin' || !r.teacherId || r.teacherId === u.id).map((r) => ({ id: r.id, question: r.question,
+      correct: r.correct, wrong1: r.wrong1, wrong2: r.wrong2, mine: canEdit(u, r), who: r.teacherId ? ((users.find((x) => x.id === r.teacherId) || {}).name || '') : 'للجميع' })) };
+  },
+  bankSave(q) {
+    return locked(() => {
+      const u = userOf(q.token); need(u, 'admin', 'teacher');
+      const v = { question: cleanText(q.question, 160), correct: cleanText(q.correct, 80), wrong1: cleanText(q.wrong1, 80), wrong2: cleanText(q.wrong2, 80) };
+      if (v.question.length < 4 || !v.correct || !v.wrong1 || !v.wrong2) fail('bad', 'اكتب السؤال، والجواب الصحيح، وجوابين خطأين');
+      if (v.correct === v.wrong1 || v.correct === v.wrong2 || v.wrong1 === v.wrong2) fail('bad', 'اجعل الأجوبة الثلاثة مختلفة');
+      if (q.id) {
+        const r = rows(SHEET_BANK, H_BANK).find((x) => x.id === q.id); if (!r) fail('missing', 'لم أجد هذا السؤال');
+        if (!canEdit(u, r)) fail('denied', 'هذا السؤال للجميع، يعدّله المدير'); setCells(SHEET_BANK, H_BANK, r._row, v); return { ok: true };
+      }
+      append(SHEET_BANK, H_BANK, Object.assign({ id: newId('b'), teacherId: u.role === 'admin' ? '' : u.id, created: Date.now() }, v)); return { ok: true };
+    });
+  },
+  bankDelete(q) {
+    return locked(() => {
+      const u = userOf(q.token); need(u, 'admin', 'teacher'); const r = rows(SHEET_BANK, H_BANK).find((x) => x.id === q.id);
+      if (!r) fail('missing', 'لم أجد هذا السؤال'); if (!canEdit(u, r)) fail('denied', 'هذا السؤال للجميع، يحذفه المدير');
+      dropRows(SHEET_BANK, H_BANK, (x) => x.id === r.id); return { ok: true };
+    });
+  },
+  // a gift to a classmate whose garden he is visiting: one piece from his cupboard, one gift a day
+  sendGift(q) {
+    return locked(() => {
+      const u = userOf(q.token); need(u, 'student'); const s = classmate(u, q.to), piece = String(q.piece || '').slice(0, 40);
+      if (!piece || piece.indexOf('|') >= 0) fail('bad', 'اختر قطعة من خزانتك');
+      const today = dayOf(Date.now());
+      if (rows(SHEET_ORDERS, H_ORDERS).some((o) => o.by === u.id && o.type === 'fgift' && dayOf(o.created) === today)) fail('late', 'أهديتَ زميلًا قطعة اليوم، فأهدِ غيرها غدًا إن شاء الله');
+      order(s.id, u, { t: 'fgift', name: piece, from: u.name }); return { ok: true };
+    });
+  },
+  // a piece hidden in his garden for his classmates to find (one at a time, for a day)
+  hideSet(q) {
+    return locked(() => {
+      const u = userOf(q.token); need(u, 'student'); const piece = String(q.piece || '').slice(0, 40);
+      const g = Math.floor(Number(q.g)), x = Number(q.x), y = Number(q.y);
+      if (!piece || piece.indexOf('|') >= 0 || !(g >= 0 && g < 39) || !(x >= 0 && x < 1100) || !(y >= 0 && y < 600)) fail('bad', 'اختر القطعة ومكانها');
+      dropRows(SHEET_HIDE, H_HIDE, (h) => h.studentId === u.id);
+      const created = Date.now();
+      append(SHEET_HIDE, H_HIDE, { id: newId('h'), studentId: u.id, name: u.name, teacherId: u.teacherId, piece, g, x: x.toFixed(1), y: y.toFixed(1), created, found: '[]' });
+      return { ok: true, until: created + HIDE_HOURS * 3600e3 };
+    });
+  },
+  hideFind(q) {
+    return locked(() => {
+      const u = userOf(q.token); need(u, 'student'); const s = classmate(u, q.owner);
+      const h = activeHides().find((x) => x.studentId === s.id);
+      if (!h || h.id !== q.id) fail('late', 'انتهى وقت هذا التحدي');
+      const found = foundOf(h); if (found.indexOf(u.id) >= 0) fail('late', 'وجدتَها من قبل!');
+      found.push(u.id); setCells(SHEET_HIDE, H_HIDE, h._row, { found: JSON.stringify(found) });
+      order(u.id, s, { t: 'found', name: String(h.piece), from: s.name });
+      order(s.id, u, { t: 'stars', n: HIDE_POINTS, text: 'وجد زميلك ' + u.name + ' القطعة التي خبّأتها في بستانك' });
+      return { ok: true, piece: String(h.piece) };
+    });
+  },
+  // the apples game. chLobby: «I am here» (every few seconds while the program is open), and who else is, an invitation
+  // waiting for him, and the game he is in
+  chLobby(q) {
+    const u = userOf(q.token); need(u, 'student');
+    const key = 'L:' + u.teacherId, L = cget(key) || {}, now = Date.now();
+    Object.keys(L).forEach((k) => { if (now - L[k].t > 45000) delete L[k]; });
+    if (q.leave) delete L[u.id]; else L[u.id] = { n: u.name, t: now };
+    cput(key, L, 600);
+    const inv = cget('I:' + u.id), gid = cch().get('M:' + u.id), g = gid ? cget('G:' + gid) : null;
+    return { ok: true, here: Object.keys(L).filter((k) => k !== u.id).map((k) => ({ id: k, name: L[k].n, busy: !!cch().get('M:' + k) })),
+      invite: inv && now - inv.t < 90000 && (cget('G:' + inv.gid) || {}).phase === 'wait' ? inv : null, game: g };
+  },
+  chInvite(q) {
+    return locked(() => {
+      const u = userOf(q.token); need(u, 'student'); const s = classmate(u, q.to);
+      if (cch().get('M:' + s.id)) fail('busy', 'زميلك في مسابقة الآن، فانتظره حتى ينتهي');
+      const old = cch().get('M:' + u.id); if (old) { const og = cget('G:' + old); if (og && og.phase !== 'over') { og.phase = 'left'; og.left = og.p.indexOf(u.id); og.seq++; cput('G:' + old, og); } }
+      const g = { id: newId('g'), p: [u.id, s.id], n: [u.name, s.name], b: [0, 0, 0, 0, 0, 0, 0, 0, 0], turn: 0, phase: 'wait', seq: 1, steal: 0, t: Date.now() };
+      cput('G:' + g.id, g); cch().put('M:' + u.id, g.id, CH_TTL); cput('I:' + s.id, { gid: g.id, from: u.id, name: u.name, t: Date.now() }, 120);
+      return { ok: true, game: g };
+    });
+  },
+  chReply(q) {
+    return locked(() => {
+      const u = userOf(q.token); need(u, 'student'); const g = myGame(u, q.gid);
+      cch().remove('I:' + u.id);
+      if (g.p[1] !== u.id || g.phase !== 'wait') fail('late', 'انتهت هذه الدعوة');
+      if (q.yes) { g.phase = 'play'; cch().put('M:' + u.id, g.id, CH_TTL); } else { g.phase = 'no'; endGame(g); }
+      g.seq++; g.t = Date.now(); cput('G:' + g.id, g); return { ok: true, game: g };
+    });
+  },
+  chState(q) { const u = userOf(q.token); need(u, 'student'); const g = q.gid ? cget('G:' + q.gid) : null; return { ok: true, game: g && g.p.indexOf(u.id) >= 0 ? g : null }; },
+  // his turn: the apple he chose, and the question he is asked about it (his classmate sees it too)
+  chAsk(q) {
+    return locked(() => {
+      const u = userOf(q.token); need(u, 'student'); const g = myGame(u, q.gid), me = g.p.indexOf(u.id), c = Math.floor(Number(q.cell));
+      if ((g.phase !== 'play' && g.phase !== 'steal') || g.turn !== me || g.ask) fail('late', 'ليس دورك الآن');
+      if (!(c >= 0 && c < 9) || (g.phase === 'play' ? g.b[c] !== 0 : g.b[c] !== 2 - me)) fail('bad', 'اختر تفاحة أخرى');
+      g.ask = { by: me, cell: c, q: String(q.q || '').slice(0, 200), opts: (q.opts || []).slice(0, 3).map((x) => String(x).slice(0, 80)), t: Date.now() };
+      g.seq++; g.t = Date.now(); cput('G:' + g.id, g); return { ok: true, game: g };
+    });
+  },
+  // his answer: right, the apple takes his colour (red for the one who invited, yellow for the other); then the turn passes.
+  // Three in a row, a column or a slant wins. A full tree with no three: each in his turn may take one of the other's apples
+  chAnswer(q) {
+    return locked(() => {
+      const u = userOf(q.token); need(u, 'student'); const g = myGame(u, q.gid), me = g.p.indexOf(u.id);
+      if (!g.ask || g.ask.by !== me) fail('late', 'لا سؤال ينتظر جوابك');
+      const c = g.ask.cell, right = !!q.right;
+      if (right) g.b[c] = me + 1;
+      g.last = { by: me, cell: c, right, pick: String(q.pick || '').slice(0, 80), answer: String(q.answer || '').slice(0, 80), q: g.ask.q, opts: g.ask.opts, seq: g.seq + 1 };
+      g.ask = null;
+      const L = lineOf(g.b);
+      if (L) { g.phase = 'over'; g.win = g.b[L[0]] - 1; g.line = L; }
+      else if (g.b.indexOf(0) < 0) { if (g.phase === 'steal') g.steal++; g.phase = 'steal'; if (g.steal >= 8) { g.phase = 'over'; g.win = -1; } }
+      g.turn = 1 - g.turn; g.seq++; g.t = Date.now(); cput('G:' + g.id, g);
+      if (g.phase === 'over') endGame(g);
+      return { ok: true, game: g };
+    });
+  },
+  chLeave(q) {
+    return locked(() => {
+      const u = userOf(q.token); need(u, 'student'); const g = q.gid ? cget('G:' + q.gid) : null;
+      if (g && g.p.indexOf(u.id) >= 0) {
+        if (g.phase === 'wait' || g.phase === 'play' || g.phase === 'steal') { g.phase = g.phase === 'wait' ? 'no' : 'left'; g.left = g.p.indexOf(u.id); g.seq++; cput('G:' + g.id, g); }
+        if (g.phase === 'no') cch().remove('I:' + g.p[1]);
+        endGame(g);
+      }
+      cch().remove('M:' + u.id); return { ok: true };
+    });
+  },
+});
+
+/**
+ * إذا نسي المدير كلمة سره: اكتب كلمة سر جديدة بين علامتي التنصيص في السطر التالي، ثم اختر هذه الدالة من القائمة
+ * في الأعلى واضغط «تشغيل»، ثم امسح كلمة السر من هنا.
+ */
+function resetAdminPassword() {
+  const NEW_PASSWORD = '';
+  if (NEW_PASSWORD.length < 6) throw new Error('اكتب كلمة سر من ستة أحرف على الأقل في السطر NEW_PASSWORD');
+  ensure();
+  const u = rows(SHEET_USERS, H_USERS).find((r) => r.role === 'admin'); if (!u) throw new Error('لا حساب للمدير بعد');
+  setPass(u, NEW_PASSWORD); Logger.log('تغيّرت كلمة سر المدير. اسم الدخول: ' + u.username);
+}

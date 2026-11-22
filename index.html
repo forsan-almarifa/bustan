@@ -43,7 +43,7 @@ button:focus-visible, [role="button"]:focus-visible { outline: 3px solid #ffd54a
 /* أبو حفص (14 Nov): «حين فتحت البرنامج على الجهاز اللوحي ظهرت الشاشة صغيرة»: it was kept a phone's width (480px) in the middle
    of any screen. Now it takes the whole width, as far as the drawing allows: the garden fills the screen's height, and a wider
    screen shows more of it (only on a screen wider than the drawing itself are there bands on its two sides). */
-.app { --w: 100vw; --sw: calc(var(--w) * 4); --ww: calc(var(--sw) * 11.5); --sh: calc(var(--sw) / 1.84616); --step: var(--w); --bs: 1; position: relative; height: 100%; width: min(100%, 184.6vh); width: min(100%, 184.6dvh); margin-inline: auto; overflow: hidden;
+.app { --w: 100vw; --sw: calc(var(--w) * 4); --ww: calc(var(--sw) * 40.5); --sh: calc(var(--sw) / 1.84616); --step: var(--w); --bs: 1; position: relative; height: 100%; width: min(100%, 184.6vh); width: min(100%, 184.6dvh); margin-inline: auto; overflow: hidden;
   background: linear-gradient(to left, var(--sky-b), var(--sky-a)); box-shadow: 0 0 40px rgba(31, 42, 30, .18); }
 
 /* the garden */
@@ -700,9 +700,15 @@ button:focus-visible, [role="button"]:focus-visible { outline: 3px solid #ffd54a
 .hiding .slot, .hiding .well { pointer-events: none; }
 .guide.nod .tilt, .guide.stand.nod .tilt { animation: nod .34s ease-in-out 4 alternate !important; }
 @keyframes nod { from { transform: rotate(0deg); } to { transform: rotate(-13deg); } }
-.guide.shake .tilt, .guide.stand.shake .tilt { animation: shake 1.1s ease-in-out 1 !important; }
-@keyframes shake { 0%, 100% { transform: translateX(0) rotate(0deg); } 14% { transform: translateX(-4px) rotate(10deg); } 32% { transform: translateX(4px) rotate(-10deg); }
-  50% { transform: translateX(-4px) rotate(10deg); } 68% { transform: translateX(4px) rotate(-10deg); } 84% { transform: translateX(-2px) rotate(5deg); } }
+/* أبو حفص (22 Nov, evening): «حركة رأس ناصح عند الجواب الخاطئ لاتزال غير جيدة ... أريده أن يلف رأسه بالنفي لكن ليس لفا كاملا، يمكن أن
+   تضيف له شعور بالحزن أو الامتعاض»: drawn from the side, his «no» is his head turning a little away and back (narrower, then
+   whole again, about his neck) twice, then it droops; meanwhile his eye half closes under a lowered lid and a sad brow */
+.guide.shake .tilt, .guide.stand.shake .tilt { animation: shake 1.9s ease-in-out 1 !important; }
+@keyframes shake { 0%, 100% { transform: none; } 11% { transform: rotate(-3deg) scaleX(.84); } 24% { transform: rotate(-3deg) scaleX(1.03); }
+  37% { transform: rotate(-4deg) scaleX(.84); } 50% { transform: rotate(-5deg) scaleX(1.02); } 64%, 88% { transform: rotate(-11deg); } }
+.guide .sad { opacity: 0; pointer-events: none; }
+.guide.shake .sad { animation: sadFace 1.9s ease-in-out 1; }
+@keyframes sadFace { 0%, 100% { opacity: 0; } 9%, 88% { opacity: 1; } }
 .sm-zoom { font-family: 'KSA', 'Noto Naskh Arabic', serif; font-size: 23px; line-height: 2; margin: 8px 0 14px; color: #4b2a10; text-align: justify; }
 .sm-hutpic { display: block; width: 100%; max-width: 380px; margin: 6px auto 12px; }
 .act-list { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
@@ -910,7 +916,24 @@ const TREES = [['الفاتحة', 1], ['الناس', 114], ['الفلق', 113], 
   ['المطففين', 83], ['الانفطار', 82], ['التكوير', 81], ['عبس', 80], ['النازعات ١', 79, '١–٢٦', 1, 26], ['النازعات ٢', 79, '٢٧–٤٦', 27, 46], ['النبأ ١', 78, '١–١٦', 1, 16], ['النبأ ٢', 78, '١٧–٤٠', 17, 40]];
 const SURAHS = TREES.map((t) => t[0]);
 const ayahsOf = (si) => (TREES[si] && TREES[si][2] ? ` (الآيات ${TREES[si][2]})` : '');
-const NG = ART.grasses.length, PER = 4;                // ten gardens, four palms in each (one in each screen)
+const NA = ART.grasses.length, PER = 4;                // جزء عمّ: ten gardens, four palms in each (one in each screen)
+// أبو حفص (22 Nov): «كل جزء يكون له بستان، وكل شجرة عبارة عن خمسة أغصان خمس صفحات أي: أربع شجرات تعادل عشرين صفحة أي: جزءا ..
+// فيكون عندنا 29 بستانا جديدا. لا ينتقل الطالب إلى أي بستان حتى يختم له المعلم أنه حفظ فيحصل على الأشجار ويفتح له البستان وينتقل
+// إليه وتبدأ دورة المراجعة». After جزء عمّ's ten, a garden for each juz from the twenty-ninth to the first (the eleventh garden is
+// the twenty-ninth juz's): four palms of five pages each, a page a frond (make_juz_meta.py). It stays shut until his sheikh tests
+// him in the whole juz and seals it; then its four palms come to him whole and sealed, and their review begins. Their grass is
+// his ten pictures again, in turn (so each still meets the next as his drawings meet)
+const JUZ = {"1":{"start":"البقرة","palms":[{"p0":2,"label":"البقرة ١–٣٧","one":true},{"p0":7,"label":"البقرة ٣٨–٧٦","one":true},{"p0":12,"label":"البقرة ٧٧–١٠٥","one":true},{"p0":17,"label":"البقرة ١٠٦–١٤١","one":true}]},"2":{"start":"البقرة ١٤٢","palms":[{"p0":22,"label":"البقرة ١٤٢–١٧٦","one":true},{"p0":27,"label":"البقرة ١٧٧–٢٠٢","one":true},{"p0":32,"label":"البقرة ٢٠٣–٢٣٠","one":true},{"p0":37,"label":"البقرة ٢٣١–٢٥٢","one":true}]},"3":{"start":"البقرة ٢٥٣","palms":[{"p0":42,"label":"البقرة ٢٥٣–٢٧٤","one":true},{"p0":47,"label":"البقرة ٢٧٥ – آل عمران ١٥","one":false},{"p0":52,"label":"آل عمران ١٦–٥٢","one":true},{"p0":57,"label":"آل عمران ٥٣–٩١","one":true}]},"4":{"start":"آل عمران ٩٢","palms":[{"p0":62,"label":"آل عمران ٩٢–١٣٢","one":true},{"p0":67,"label":"آل عمران ١٣٣–١٦٥","one":true},{"p0":72,"label":"آل عمران ١٦٦–٢٠٠","one":true},{"p0":77,"label":"النساء ١–٢٣","one":true}]},"5":{"start":"النساء ٢٤","palms":[{"p0":82,"label":"النساء ٢٤–٥١","one":true},{"p0":87,"label":"النساء ٥٢–٨٦","one":true},{"p0":92,"label":"النساء ٨٧–١١٣","one":true},{"p0":97,"label":"النساء ١١٤–١٤٧","one":true}]},"6":{"start":"النساء ١٤٨","palms":[{"p0":102,"label":"النساء ١٤٨ – المائدة ٢","one":false},{"p0":107,"label":"المائدة ٣–٢٣","one":true},{"p0":112,"label":"المائدة ٢٤–٥٠","one":true},{"p0":117,"label":"المائدة ٥١–٨٣","one":true}]},"7":{"start":"المائدة ٨٢","palms":[{"p0":122,"label":"المائدة ٨٤–١١٣","one":true},{"p0":127,"label":"المائدة ١١٤ – الأنعام ٣٥","one":false},{"p0":132,"label":"الأنعام ٣٦–٧٣","one":true},{"p0":137,"label":"الأنعام ٧٤–١١٠","one":true}]},"8":{"start":"الأنعام ١١١","palms":[{"p0":142,"label":"الأنعام ١١١–١٤٢","one":true},{"p0":147,"label":"الأنعام ١٤٣ – الأعراف ١١","one":false},{"p0":152,"label":"الأعراف ١٢–٥١","one":true},{"p0":157,"label":"الأعراف ٥٢–٨٧","one":true}]},"9":{"start":"الأعراف ٨٨","palms":[{"p0":162,"label":"الأعراف ٨٨–١٣٧","one":true},{"p0":167,"label":"الأعراف ١٣٨–١٦٣","one":true},{"p0":172,"label":"الأعراف ١٦٤–٢٠٦","one":true},{"p0":177,"label":"الأنفال ١–٤٠","one":true}]},"10":{"start":"الأنفال ٤١","palms":[{"p0":182,"label":"الأنفال ٤١–٧٥","one":true},{"p0":187,"label":"التوبة ١–٣١","one":true},{"p0":192,"label":"التوبة ٣٢–٦١","one":true},{"p0":197,"label":"التوبة ٦٢–٩٣","one":true}]},"11":{"start":"التوبة ٩٤","palms":[{"p0":202,"label":"التوبة ٩٤–١٢٢","one":true},{"p0":207,"label":"التوبة ١٢٣ – يونس ٢٥","one":false},{"p0":212,"label":"يونس ٢٦–٧٠","one":true},{"p0":217,"label":"يونس ٧١ – هود ٥","one":false}]},"12":{"start":"هود ٦","palms":[{"p0":222,"label":"هود ٦–٤٥","one":true},{"p0":227,"label":"هود ٤٦–٨٨","one":true},{"p0":232,"label":"هود ٨٩ – يوسف ١٤","one":false},{"p0":237,"label":"يوسف ١٥–٥٢","one":true}]},"13":{"start":"يوسف ٥٣","palms":[{"p0":242,"label":"يوسف ٥٣–٩٥","one":true},{"p0":247,"label":"يوسف ٩٦ – الرعد ١٨","one":false},{"p0":252,"label":"الرعد ١٩ – إبراهيم ١٠","one":false},{"p0":257,"label":"إبراهيم ١١–٥٢","one":true}]},"14":{"start":"الحجر","palms":[{"p0":262,"label":"الحجر ١–٩٠","one":true},{"p0":267,"label":"الحجر ٩١ – النحل ٤٢","one":false},{"p0":272,"label":"النحل ٤٣–٨٧","one":true},{"p0":277,"label":"النحل ٨٨–١٢٨","one":true}]},"15":{"start":"الإسراء","palms":[{"p0":282,"label":"الإسراء ١–٤٩","one":true},{"p0":287,"label":"الإسراء ٥٠–٩٦","one":true},{"p0":292,"label":"الإسراء ٩٧ – الكهف ٢٧","one":false},{"p0":297,"label":"الكهف ٢٨–٧٤","one":true}]},"16":{"start":"الكهف ٧٥","palms":[{"p0":302,"label":"الكهف ٧٥ – مريم ٢٥","one":false},{"p0":307,"label":"مريم ٢٦–٩٥","one":true},{"p0":312,"label":"مريم ٩٦ – طه ٧٦","one":false},{"p0":317,"label":"طه ٧٧–١٣٥","one":true}]},"17":{"start":"الأنبياء","palms":[{"p0":322,"label":"الأنبياء ١–٥٧","one":true},{"p0":327,"label":"الأنبياء ٥٨–١١٢","one":true},{"p0":332,"label":"الحج ١–٣٨","one":true},{"p0":337,"label":"الحج ٣٩–٧٨","one":true}]},"18":{"start":"المؤمنون","palms":[{"p0":342,"label":"المؤمنون ١–٧٤","one":true},{"p0":347,"label":"المؤمنون ٧٥ – النور ٢٠","one":false},{"p0":352,"label":"النور ٢١–٥٣","one":true},{"p0":357,"label":"النور ٥٤ – الفرقان ٢٠","one":false}]},"19":{"start":"الفرقان ٢١","palms":[{"p0":362,"label":"الفرقان ٢١–٧٧","one":true},{"p0":367,"label":"الشعراء ١–١١١","one":true},{"p0":372,"label":"الشعراء ١١٢–٢٢٧","one":true},{"p0":377,"label":"النمل ١–٥٥","one":true}]},"20":{"start":"النمل ٥٦","palms":[{"p0":382,"label":"النمل ٥٦ – القصص ١٣","one":false},{"p0":387,"label":"القصص ١٤–٥٠","one":true},{"p0":392,"label":"القصص ٥١ – العنكبوت ٦","one":false},{"p0":397,"label":"العنكبوت ٧–٤٥","one":true}]},"21":{"start":"العنكبوت ٤٦","palms":[{"p0":402,"label":"العنكبوت ٤٦ – الروم ٢٤","one":false},{"p0":407,"label":"الروم ٢٥ – لقمان ١١","one":false},{"p0":412,"label":"لقمان ١٢ – السجدة ٢٠","one":false},{"p0":417,"label":"السجدة ٢١ – الأحزاب ٣٠","one":false}]},"22":{"start":"الأحزاب ٣١","palms":[{"p0":422,"label":"الأحزاب ٣١–٦٢","one":true},{"p0":427,"label":"الأحزاب ٦٣ – سبأ ٣١","one":false},{"p0":432,"label":"سبأ ٣٢ – فاطر ١٨","one":false},{"p0":437,"label":"فاطر ١٩ – يس ٢٧","one":false}]},"23":{"start":"يس ٢٨","palms":[{"p0":442,"label":"يس ٢٨ – الصافات ٢٤","one":false},{"p0":447,"label":"الصافات ٢٥–١٥٣","one":true},{"p0":452,"label":"الصافات ١٥٤ – ص ٦١","one":false},{"p0":457,"label":"ص ٦٢ – الزمر ٣١","one":false}]},"24":{"start":"الزمر ٣٢","palms":[{"p0":462,"label":"الزمر ٣٢–٧٤","one":true},{"p0":467,"label":"الزمر ٧٥ – غافر ٤٠","one":false},{"p0":472,"label":"غافر ٤١–٨٥","one":true},{"p0":477,"label":"فصلت ١–٤٦","one":true}]},"25":{"start":"فصلت ٤٧","palms":[{"p0":482,"label":"فصلت ٤٧ – الشورى ٣١","one":false},{"p0":487,"label":"الشورى ٣٢ – الزخرف ٣٣","one":false},{"p0":492,"label":"الزخرف ٣٤ – الدخان ١٨","one":false},{"p0":497,"label":"الدخان ١٩ – الجاثية ٣٢","one":false}]},"26":{"start":"الأحقاف","palms":[{"p0":502,"label":"الجاثية ٣٣ – الأحقاف","one":false},{"p0":507,"label":"محمد – الفتح ٩","one":false},{"p0":512,"label":"الفتح ١٠ – الحجرات ١١","one":false},{"p0":517,"label":"الحجرات ١٢ – الذاريات ٣٠","one":false}]},"27":{"start":"الذاريات ٣١","palms":[{"p0":522,"label":"الذاريات ٣١ – النجم ٢٦","one":false},{"p0":527,"label":"النجم ٢٧ – الرحمن ١٨","one":false},{"p0":532,"label":"الرحمن ١٩ – الواقعة ٧٦","one":false},{"p0":537,"label":"الواقعة ٧٧ – الحديد","one":false}]},"28":{"start":"المجادلة","palms":[{"p0":542,"label":"المجادلة – الحشر ٩","one":false},{"p0":547,"label":"الحشر ١٠ – الصف ٥","one":false},{"p0":552,"label":"الصف ٦ – التغابن ٩","one":false},{"p0":557,"label":"التغابن ١٠ – التحريم","one":false}]},"29":{"start":"الملك","palms":[{"p0":562,"label":"الملك – الحاقة ٨","one":false},{"p0":567,"label":"الحاقة ٩ – نوح","one":false},{"p0":572,"label":"الجن – المدثر ٤٧","one":false},{"p0":577,"label":"المدثر ٤٨ – المرسلات","one":false}]}}, NJ = 29, NG = NA + NJ;
+const juzOfG = (g) => NG - g, gOfJuz = (j) => NG - j, isJG = (g) => g >= NA;
+const isJ = (si) => si >= PER * NA, jOf = (si) => juzOfG(Math.floor(si / PER)), jPalm = (si) => JUZ[jOf(si)].palms[si % PER];
+const GR = (g) => ART.grasses[g % NA];
+// the juz whose pages and recitation are uploaded (BUSTAN_AJZA in config.js: to try one before it is published)
+const JZ_READY = Array.isArray(window.BUSTAN_AJZA) ? window.BUSTAN_AJZA : [];
+const jReady = (j) => JZ_READY.indexOf(j) >= 0;
+for (let g = NA; g < NG; g++) for (let i = 0; i < PER; i++) SURAHS[PER * g + i] = JUZ[juzOfG(g)].palms[i].label;
+// a palm's portion in a sentence: «سورة الناس», «سورة البقرة ١–٣٧», or «صفحات الملك – الحاقة ٨»
+const SP = (si, b) => { const w = (x) => (b ? `<b>${x}</b>` : x); return !isJ(si) || jPalm(si).one ? `سورة ${w(SURAHS[si])}` : `صفحات ${w(SURAHS[si])}`; };
+const BST = (g) => (isJG(g) ? `بستان الجزء ${AR(juzOfG(g))}` : 'البستان ' + ORDF[g]);
 // أبو حفص (13 Nov): «يمكن أن نضع بين البستان الأول والثاني بستانا فارغا فيه بئر ماء»: a screen between them with the well, where
 // the child goes for water. The swipe has one stop more: the four of the first garden, the well, then the others
 // أبو حفص (21 Nov): «تضعهم جميعا على بساتين جديدة مثل بستان البئر»: small gardens of one screen each at the entrance, right of
@@ -971,7 +994,7 @@ const TEST_TOOLS = !API || new URLSearchParams(location.search).has('test');
 const SESSION_KEY = 'bustan-session';
 let session = null, syncTimer = null, pushing = false, updateWaiting = null;
 function isStudent() { return !!(session && session.user.role === 'student'); }
-const APP_VERSION = '2026.11.22.2';
+const APP_VERSION = '2026.11.22.3';
 const DEFAULTS = { leaves: LEAF_ORDER.length, opened: 1, stars: 0, plough: false, portionMax: 5, chainOne: 3, chainJoin: 3, reviewEvery: 1 };
 const SAMPLE = {};
 let settings = { ...DEFAULTS }, plots = {};
@@ -1031,7 +1054,7 @@ const gds = [];        // each garden's drawing: { g, el, img, plaques, slots, t
 function el(tag, attrs = {}, parent) { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; }
 function useOf(id, parent) { const u = el('use', {}, parent); u.setAttribute('href', '#' + id); u.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', '#' + id); return u; }
 let ringsLayer = null;
-const gardenOpen = (g) => g < (settings.opened || 1);
+const gardenOpen = (g) => (isJG(g) ? !!(settings.ajza || {})[juzOfG(g)] : g < (settings.opened || 1));
 const CMU = 28.3465;   // points in a centimetre: the drawing's unit
 const ITEM = Object.fromEntries(ART.items.map((it) => [it.name, it]));
 const DNAME = { 'وردة حمراء': 'الزهرة الحمراء', 'وردة بيضاء': 'الزهرة البيضاء', 'وردة صفراء': 'الزهرة الصفراء', 'فطر': 'الفطر الأحمر', 'فطر2': 'الفطر الوردي',
@@ -1084,7 +1107,7 @@ function fitSpot(sp, it) {
 // أجمل»): anywhere on its grass, a little bigger or smaller; the lamps and the plaques among them ----------
 function migrateDecor(gi) {   // the earlier prototype put the pieces on the garden's own spots
   const d = decor[gi]; if (!d || Array.isArray(d)) return;
-  decor[gi] = Object.entries(d).map(([n, name]) => { const sp = ART.grasses[gi].spots[n], it = ITEM[name];
+  decor[gi] = Object.entries(d).map(([n, name]) => { const sp = GR(gi).spots[n], it = ITEM[name];
     return sp && it ? { name, x: +((sp.x + (fitSpot(sp, it) || 0)) * CMU).toFixed(1), y: +(sp.y * CMU).toFixed(1), s: 1 } : null; }).filter(Boolean);
 }
 function placePiece(gi, i, popIn) {
@@ -1105,7 +1128,7 @@ function drawPieces(gi) {
   centerPlaques();
 }
 // where the grass is: the hill line of the garden (from the build), the piece's foot below it
-function groundAt(gi, x) { const t = ART.grasses[gi].top; if (!t) return ART.H * .5; return t[Math.max(0, Math.min(t.length - 1, Math.round(x / CMU / .25)))] * CMU; }
+function groundAt(gi, x) { const t = GR(gi).top; if (!t) return ART.H * .5; return t[Math.max(0, Math.min(t.length - 1, Math.round(x / CMU / .25)))] * CMU; }
 function pieceOk(gi, x, y) {
   if (x < .5 * CMU || x > ART.W - .5 * CMU || y > ART.H - .5 * CMU) return false;
   if (y < groundAt(gi, x) + .35 * CMU) return false;                                       // in the sky
@@ -1202,7 +1225,7 @@ function buildWorld() {
   for (const n in decoEls) delete decoEls[n];
   $('stage').setAttribute('viewBox', `0 0 ${WORLD_W.toFixed(2)} ${ART.H}`);
   if (!decor) decor = {};
-  ART.grasses.forEach((_, gi) => { buildGarden(gi); if (gi === WELL_G) buildWell(); });
+  for (let gi = 0; gi < NG; gi++) { buildGarden(gi); if (gi === WELL_G) buildWell(); }
   if (typeof buildSmalls === 'function') buildSmalls();
   markLocks(); centerPlaques(); near();
 }
@@ -1243,7 +1266,7 @@ function replant(k) {
   const s = slotEls[k], old = s.palm.cloneNode(true); s.palm.parentNode.insertBefore(old, s.palm);
   if (!STILL) old.animate([{ opacity: 1, transform: 'scale(1, 1)' }, { opacity: 0, transform: 'scale(.6, .2)' }], { duration: 650, easing: 'ease-in', fill: 'forwards' }).onfinish = () => old.remove();
   else old.remove();
-  setTimeout(() => { render(k, true); count(); const p = plots[k]; tell(`زرعتَ ${plantName(p)} مكانها، فراجع سورة <b>${SURAHS[p.surah]}</b> لتنبت ${isTree(p) ? 'أغصانها' : 'سعفها'}.`); }, STILL ? 0 : 500);
+  setTimeout(() => { render(k, true); count(); const p = plots[k]; tell(`زرعتَ ${plantName(p)} مكانها، فراجع ${SP(p.surah, 1)} لتنبت ${isTree(p) ? 'أغصانها' : 'سعفها'}.`); }, STILL ? 0 : 500);
 }
 // the seal on a tree: a few sparkles twinkle over the branches as the dew drops appear on its fruit
 function ripenTree(s) {
@@ -1276,7 +1299,7 @@ function flowFall(F, parent, gi) {
     el('ellipse', { class: 'fall-foam', cx: (x + w * fx).toFixed(1), cy: (y + h * fy).toFixed(1), rx: r * 2, ry: r, fill: '#ffffff', opacity: .8, style: `animation-delay:-${(i * .37).toFixed(2)}s` }, flow));
 }
 function buildGarden(gi) {
-  const G = ART.grasses[gi];
+  const G = GR(gi);
   const gEl = el('g', { class: 'gd far', 'data-g': gi, transform: `translate(${offX(gi).toFixed(2)} 0)` }, world);
   // the picture reaches a hair past its left side, under the next garden (drawn after it), so no line of sky shows at the seam
   const img = el('image', { class: 'grass', x: -G.pad, y: 0, width: (ART.W + G.pad).toFixed(2), height: ART.H, preserveAspectRatio: 'none' }, gEl);
@@ -1391,7 +1414,7 @@ function onWell() {
 function goWell(k) {
   const p = plots[k]; if (!p) return;
   hideHint(); closeSheet(); settings.wellFor = k; save();
-  const there = () => tell(`وضعتُ الدلو بجوار <b>البئر</b>. اضغط البئر ليقرأ الشيخ سورة <b>${SURAHS[p.surah]}</b>، فإذا أتمّها غطستُ بالدلو في البئر فملأته، وحملته إلى ${plantMine(p)}.`);
+  const there = () => tell(`وضعتُ الدلو بجوار <b>البئر</b>. اضغط البئر ليقرأ الشيخ ${SP(p.surah, 1)}، فإذا أتمّها غطستُ بالدلو في البئر فملأته، وحملته إلى ${plantMine(p)}.`);
   if (p.water === 'well') { scrollToPage(WELL_STOP); return setTimeout(there, STILL ? 0 : 900); }
   bucketToWell(k, there);
 }
@@ -1495,7 +1518,7 @@ async function bucketRun(k) {
   const p = plots[k]; if (!p) return;
   const atWell = p.water === 'well', s = slotEls[k];
   p.water = 'full'; save();
-  const told = () => tell(`الدلو ممتلئ بجوار ${plantName(p)} سورة <b>${SURAHS[p.surah]}</b>. اضغط عليه لأسقيها.`);
+  const told = () => tell(`الدلو ممتلئ بجوار ${plantName(p)} ${SP(p.surah, 1)}. اضغط عليه لأسقيها.`);
   if (STILL || !bird.perched || bird.busy || !wellD) { markWellBucket(); scrollToSlot(k); setTimeout(() => { render(k); count(); told(); }, STILL ? 0 : 800); return; }
   bird.busy = true; hideHint(); s.g.classList.add('fetching');
   wellD.hold = true; wellD.well.classList.toggle('has-bucket', atWell);            // it stays by the well until he takes it
@@ -1583,8 +1606,8 @@ function waterNow(k) {
     else { p.neglect = Math.max(0, (p.neglect || 0) - 1); p.lastWater = todayKey(); delete p.counted; addLog({ kind: 'review', surahs: [p.surah] }); }
     save(); render(k); count();
     const st = stageOf(p), T = isTree(p);
-    const msg = wasSeed ? `ما شاء الله! خرج جذع ${plantName(p)} سورة <b>${SURAHS[p.surah]}</b>. اضغط عليه لتبدأ تكرار سورتها، فكل تكرار كامل يُنبت ${T ? 'غصنًا' : 'سعفة'}.`
-      : st.leaves < st.grown || st.shown < st.grown ? `${T ? 'اخضرّ غصن' : 'اخضرّت سعفة'} من ${plantName(p)} سورة <b>${SURAHS[p.surah]}</b>، وبقي فيها ما يحتاج إلى سقي: املأ الدلو مرة أخرى من البئر.`
+    const msg = wasSeed ? `ما شاء الله! خرج جذع ${plantName(p)} ${SP(p.surah, 1)}. اضغط عليه لتبدأ تكرار سورتها، فكل تكرار كامل يُنبت ${T ? 'غصنًا' : 'سعفة'}.`
+      : st.leaves < st.grown || st.shown < st.grown ? `${T ? 'اخضرّ غصن' : 'اخضرّت سعفة'} من ${plantName(p)} ${SP(p.surah, 1)}، وبقي فيها ما يحتاج إلى سقي: املأ الدلو مرة أخرى من البئر.`
       : 'شكرًا لك، لقد سقيت الزرعة. داوم على هذا الفعل حتى تظل مخضرّة دائمًا.';
     setTimeout(() => tell(msg), wasSeed && !STILL ? GROW_MS : 300);
   }), STILL ? 0 : 500);
@@ -1592,7 +1615,7 @@ function waterNow(k) {
 function doPlough(k) {
   const q = plots[k]; if (!q || !settings.plough || isThirsty(k)) return;
   scrollToSlot(k);
-  setTimeout(() => plough(k, () => { q.thorns = 0; save(); render(k, false); tell(`أحسنت! اقتلعتَ الشوك بمحراثك، فعاد ما حول ${plantName(q)} سورة <b>${SURAHS[q.surah]}</b> نظيفًا.`); }), STILL ? 0 : 500);
+  setTimeout(() => plough(k, () => { q.thorns = 0; save(); render(k, false); tell(`أحسنت! اقتلعتَ الشوك بمحراثك، فعاد ما حول ${plantName(q)} ${SP(q.surah, 1)} نظيفًا.`); }), STILL ? 0 : 500);
 }
 function markLocks() { gds.forEach((D) => D.el.classList.toggle('locked', !gardenOpen(D.g))); }
 
@@ -3245,7 +3268,7 @@ function chestArt(parent, shut, ready) {
 }
 // where they stand: on two of the garden's own spots in its first screen, either side of its palm, clear of lamps
 function prizeSpots(gi) {
-  const G = ART.grasses[gi], h = holes[PER * gi], hx = h.x / CMU, hy = h.y / CMU;
+  const G = GR(gi), h = holes[PER * gi], hx = h.x / CMU, hy = h.y / CMU;
   const lamps = G.deco.filter((d) => d.kind === 'lamp').map((d) => ({ x: d.x / CMU, y: d.y / CMU }));
   const ok = (sp, gw, lo, hi) => sp.x > lo && sp.x < hi && Math.abs(sp.x - hx) >= 2.1 && fitSpot(sp, { gw }) === 0
     && !lamps.some((l) => Math.abs(l.x - sp.x) < 1.6 && sp.y - l.y < 1 && l.y - sp.y < 3.2);
@@ -3267,7 +3290,7 @@ function prizeSpots(gi) {
   return { dome, chest };
 }
 function drawPrizes(gi) {
-  const D = gds[gi]; if (!gi || !D) return;
+  const D = gds[gi]; if (!gi || !D || isJG(gi)) return;
   D.el.querySelectorAll('.prize').forEach((e) => e.remove());
   const at = D.prizeAt || (D.prizeAt = prizeSpots(gi)), shut = !gardenOpen(gi) || ceremonyFor === gi;
   D.reserved = new Set(chestOpened(gi) ? [] : [at.chest.n]);
@@ -3285,14 +3308,14 @@ function drawPrizes(gi) {
 function tapChest(gi, g) {
   if (hunt.on || placing) return;
   const c = chestOf(gi);
-  if (!gardenOpen(gi) || ceremonyFor === gi) return tell(c.secret ? `في هذا الكنز <b>جائزة سرّية</b> من ${c.from}! يُفتح حين يكتمل <b>مفتاح البستان ${ORDF[gi]}</b>.`
-    : `في هذا الكنز جائزة من ${c.from}: <b>${c.what}</b>! يُفتح حين يكتمل <b>مفتاح البستان ${ORDF[gi]}</b>.`);
+  if (!gardenOpen(gi) || ceremonyFor === gi) return tell(c.secret ? `في هذا الكنز <b>جائزة سرّية</b> من ${c.from}! يُفتح حين يكتمل <b>مفتاح ${BST(gi)}</b>.`
+    : `في هذا الكنز جائزة من ${c.from}: <b>${c.what}</b>! يُفتح حين يكتمل <b>مفتاح ${BST(gi)}</b>.`);
   if (chestOpened(gi) || g.classList.contains('opened')) return;
   settings.chestOpen = { ...(settings.chestOpen || {}), [gi]: Date.now() }; save();
   g.classList.remove('ready'); g.classList.add('opened');
   const sp = gds[gi].prizeAt.chest; burst(gds[gi].el, sp.x * CMU, sp.y * CMU - 30);
   setTimeout(() => {
-    say(`فتحتَ كنز البستان ${ORDF[gi]}! <span class="prize"><span class="star">★</span><b>${c.what}</b></span>جائزتك من ${c.from}، فاطلبها ${CHEST_FROM[c.from] || 'منه'}، فقد استحققتها بحفظك. بارك الله فيك!`, { stay: true });
+    say(`فتحتَ كنز ${BST(gi)}! <span class="prize"><span class="star">★</span><b>${c.what}</b></span>جائزتك من ${c.from}، فاطلبها ${CHEST_FROM[c.from] || 'منه'}، فقد استحققتها بحفظك. بارك الله فيك!`, { stay: true });
     setTimeout(() => { if (!STILL) g.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 700, fill: 'forwards' }); setTimeout(() => drawPrizes(gi), STILL ? 0 : 750); }, STILL ? 0 : 2600);
   }, STILL ? 0 : 900);
 }
@@ -3316,18 +3339,18 @@ function keyDrawing(svg, have, whole) {
 }
 function drawKey() {
   const kb = $('keyBar'), next = ceremonyFor != null ? ceremonyFor : (settings.opened || 1);
-  if (next >= NG || !gds.length) { kb.hidden = true; return; }
+  if (next >= NA || !gds.length) { kb.hidden = true; return; }
   const have = ceremonyFor != null ? PER : inGarden(next - 1).filter(complete).length;
   kb.hidden = false; keyDrawing($('keySvg'), have, ceremonyFor != null);
-  $('keyName').textContent = `مفتاح البستان ${ORDF[next]}`;
+  $('keyName').textContent = `مفتاح ${BST(next)}`;
   $('keyCount').textContent = have >= PER ? 'اكتمل!' : `${AR(have)} من ${AR(PER)}`;
   if (keyWas && keyWas.next === next && have > keyWas.have && !STILL) { kb.classList.remove('pulse'); void kb.offsetWidth; kb.classList.add('pulse'); }
   keyWas = { next, have };
 }
 $('keyBar').addEventListener('click', () => {
-  const next = settings.opened || 1; if (next >= NG) return;
+  const next = settings.opened || 1; if (next >= NA) return;
   const left = inGarden(next - 1).map((t) => { const k = Object.keys(plots).find((q) => plots[q].surah === t); return k != null && complete(+k) ? null : SURAHS[t]; }).filter(Boolean);
-  tell(`هذا <b>مفتاح البستان ${ORDF[next]}</b>: كل نخلة تكتمل في البستان ${ORDF[next - 1]} تملأ قطعة منه. ${left.length ? `بقي لك: ${left.join('، ')}.` : 'اكتمل!'}`);
+  tell(`هذا <b>مفتاح ${BST(next)}</b>: كل نخلة تكتمل في ${BST(next - 1)} تملأ قطعة منه. ${left.length ? `بقي لك: ${left.join('، ')}.` : 'اكتمل!'}`);
 });
 // ---------- the teacher's screen, and the father's ----------
 // أبو حفص: «والختم للشيخ، وإذا عملنا نسخة للأسرة فيكون للأب مكان المعلم». One screen serves both: in the halaqa it is the
@@ -3375,8 +3398,9 @@ function childFacts() {
   const ks = Object.keys(plots).map(Number).sort((a, b) => a - b);
   const last = log.filter((e) => e.kind === 'wird' || e.kind === 'review').pop();
   const tests = ks.map((k) => plots[k].strength).filter(Boolean).sort((a, b) => b.at - a.at);
-  return { ks, full: ks.filter(complete).length, sealed: ks.filter((k) => plots[k].sealed).length,
-    wait: ks.filter((k) => complete(k) && !plots[k].sealed), yellow: ks.filter(isThirsty).length, thorns: ks.filter((k) => (plots[k].thorns || 0) > 0).length,
+  const am = ks.filter((k) => !isJ(k));          // (the counts of complete and sealed are جزء عمّ's; the juz are counted apart)
+  return { ks, full: am.filter(complete).length, sealed: am.filter((k) => plots[k].sealed).length,
+    wait: am.filter((k) => complete(k) && !plots[k].sealed), yellow: ks.filter(isThirsty).length, thorns: ks.filter((k) => (plots[k].thorns || 0) > 0).length,
     str: tests[0] ? [tests[0].pts, tests[0].of] : null, last: last ? last.t : null };
 }
 function chipsOf(f) {
@@ -3406,7 +3430,7 @@ function drawTeach() {
   $('tSub').textContent = who(`حلقتك: ${AR(all.length)} طلاب`, `أبناؤك: ${AR(all.length)}`);
   const waits = all.reduce((s, c) => s + c.wait, 0), late = all.filter((c) => c.thorns || c.yellow || (c.days || 0) >= 7).length;
   const rows = all.map((c, i) => `<button class="t-stu" data-stu="${i}"><span class="t-ava" aria-hidden="true">${c.name[0]}</span><span class="t-who">
-      <b>${c.name}</b><span class="t-line">البستان ${ORDF[c.g - 1]} — كاملة ${AR(c.full)}، مثمرة ${AR(c.sealed)}</span>${chipsOf(c)}</span><span aria-hidden="true" style="color:var(--muted);font-size:20px">‹</span></button>`).join('');
+      <b>${c.name}</b><span class="t-line">${BST(c.g - 1)} — كاملة ${AR(c.full)}، مثمرة ${AR(c.sealed)}</span>${chipsOf(c)}</span><span aria-hidden="true" style="color:var(--muted);font-size:20px">‹</span></button>`).join('');
   $('tBody').innerHTML = `<div class="t-sum"><div><b>${AR(all.length)}</b><span>${who('طلاب الحلقة', 'أبناؤك')}</span></div>
       <div><b>${AR(waits)}</b><span>سورة تنتظر التسميع</span></div><div><b>${AR(late)}</b><span>يحتاجون مراجعة</span></div></div>
     ${rows}<p class="t-note" style="margin:10px 4px">${CHILD} وحده من بيانات هذه التجربة، والبقية أمثلة لترى شكل القائمة.</p>${ROLE() === 'halaqa' && !API ? protoFaidaSec() : ''}`;
@@ -3431,15 +3455,15 @@ function drawParentList() {
   $('tTitle').textContent = 'تقرير اليوم'; $('tSub').textContent = `أبناؤك في الحلقة: ${AR(all.length)}`;
   $('tBody').innerHTML = all.map((c, i) => `<button class="t-stu" data-stu="${i}"><span class="t-ava" aria-hidden="true">${c.name[0]}</span><span class="t-who"><b>${c.name}</b>
       <span class="t-line">${c.today != null ? `أتمّ ورد اليوم — ${reps(c.today)}` : 'لم يُتمّ ورد اليوم بعد'}</span>
-      <div class="t-chips">${c.heard ? '<span class="t-chip">سمعتَه اليوم</span>' : c.today != null ? '<span class="t-chip seal">ينتظر أن تسمعه</span>' : ''}<span class="t-chip">البستان ${ORDF[c.g - 1]}</span></div></span><span aria-hidden="true" style="color:var(--muted);font-size:20px">‹</span></button>`).join('')
+      <div class="t-chips">${c.heard ? '<span class="t-chip">سمعتَه اليوم</span>' : c.today != null ? '<span class="t-chip seal">ينتظر أن تسمعه</span>' : ''}<span class="t-chip">${BST(c.g - 1)}</span></div></span><span aria-hidden="true" style="color:var(--muted);font-size:20px">‹</span></button>`).join('')
     + `<p class="t-note" style="margin:10px 4px">${CHILD} وحده من بيانات هذه التجربة، والبقية مثال.</p>`;
 }
 function drawReport() {
-  const T = todayOf(), F = childFacts(), heard = settings.heardDay === todayKey(), g = settings.opened || 1, c = g < NG ? chestOf(g) : null;
+  const T = todayOf(), F = childFacts(), heard = settings.heardDay === todayKey(), g = settings.opened || 1, c = g < NA ? chestOf(g) : null;
   $('tTitle').textContent = CHILD; $('tSub').textContent = 'تقرير اليوم';
-  const today = T.es.map((e) => `<div class="t-row"><span class="t-what">${e.kind === 'wird' ? `ورد سورة ${SURAHS[e.surah]}: ${ayRange(e.from, e.to)}، قرأها ${reps(e.reps)}${e.test ? `، وقوة الحفظ ${AR(e.test.pts)} من ${AR(e.test.of)}` : ''}`
+  const today = T.es.map((e) => `<div class="t-row"><span class="t-what">${e.kind === 'wird' ? `ورد ${SP(e.surah)}: ${ayRange(e.from, e.to)}، قرأها ${reps(e.reps)}${e.test ? `، وقوة الحفظ ${AR(e.test.pts)} من ${AR(e.test.of)}` : ''}`
     : `مراجعة مع ناصح: ${(e.surahs || []).filter((s) => s != null).map((s) => SURAHS[s]).join('، ')}`}</span></div>`).join('');
-  const fromSheikh = log.filter((e) => e.kind === 'hear').slice(-5).reverse().map((e) => `<div class="t-row"><span class="when">${ago(e.t)}</span><span class="t-what">سورة ${SURAHS[e.surah]}: <b>${e.grade}</b>${e.note ? ` — «${escT(e.note)}»` : ''}</span></div>`).join('');
+  const fromSheikh = log.filter((e) => e.kind === 'hear').slice(-5).reverse().map((e) => `<div class="t-row"><span class="when">${ago(e.t)}</span><span class="t-what">${SP(e.surah)}: <b>${e.grade}</b>${e.note ? ` — «${escT(e.note)}»` : ''}</span></div>`).join('');
   const L2 = news().filter((n) => n.kind === 'letter').pop();
   $('tBody').innerHTML = `
     <div class="t-sum"><div><b>${T.wird ? '✓' : '—'}</b><span>${T.wird ? 'أتمّ ورد اليوم' : 'لم يُتمّ ورده بعد'}</span></div><div><b>${AR(T.reps)}</b><span>تكرارات اليوم</span></div><div><b>${AR(settings.stars || 0)}</b><span>نقاطه ★</span></div></div>
@@ -3451,7 +3475,7 @@ function drawReport() {
     <div class="t-sec"><h3>رسالة يحملها ناصح</h3>
       <div class="t-field"><textarea id="tLetter" maxlength="140" aria-label="نص الرسالة" placeholder="بارك الله فيك يا ${CHILD}، فرحنا بحفظك!"></textarea>
       <button class="btn primary" data-t="letter">أرسلها مع ناصح</button></div><div class="t-sent" id="tLetterSent">${L2 ? `تنتظره رسالتك: «${escT(L2.text)}»` : ''}</div></div>
-    ${c ? `<div class="t-sec"><h3>جائزة من البيت في كنز البستان ${ORDF[g]}</h3><p class="t-note">يراها في صندوق البستان المقفل، ويفتحه حين يكتمل مفتاحه.</p>
+    ${c ? `<div class="t-sec"><h3>جائزة من البيت في كنز ${BST(g)}</h3><p class="t-note">يراها في صندوق البستان المقفل، ويفتحه حين يكتمل مفتاحه.</p>
       <div class="chest-set t-chest"><select id="chFrom" aria-label="الجائزة من">${Object.keys(CHEST_FROM).map((f) => `<option${f === c.from ? ' selected' : ''}>${f}</option>`).join('')}</select>
       <input id="chWhat" type="text" maxlength="40" value="${escT(c.what)}" aria-label="الجائزة">
       <label><input type="checkbox" id="chSecret"${c.secret ? ' checked' : ''}> سرّية حتى يفتحه</label></div></div>` : ''}
@@ -3471,17 +3495,17 @@ function stepT(key, val, lab) {
 }
 function drawChild() {
   const F = childFacts(), N = news(), g = settings.opened || 1, L = settings.leaves;
-  $('tTitle').textContent = CHILD; $('tSub').textContent = `البستان ${ORDF[g - 1]} — ${who('في حلقتك', 'ابنك')}`;
+  $('tTitle').textContent = CHILD; $('tSub').textContent = `${BST(g - 1)} — ${who('في حلقتك', 'ابنك')}`;
   const justHeard = N.filter((n) => n.kind === 'hear' && plots[n.k]);
-  const key = g < NG ? `<p class="t-note">مفتاح البستان ${ORDF[g]}: ${AR(inGarden(g - 1).filter(complete).length)} من ${AR(PER)} — كل نخلة تكتمل في البستان ${ORDF[g - 1]} تملأ قطعة منه.</p>` : '';
+  const key = g < NA ? `<p class="t-note">مفتاح ${BST(g)}: ${AR(inGarden(g - 1).filter(complete).length)} من ${AR(PER)} — كل نخلة تكتمل في ${BST(g - 1)} تملأ قطعة منه.</p>` : '';
   // waiting to be heard: complete palms not sealed yet; and those sealed just now (until he goes back to his garden)
   const waitRows = F.wait.map((k) => { const p = plots[k];
-    return `<div class="t-row t-wait"><div class="t-what"><b>سورة ${SURAHS[p.surah]}</b><span class="t-line">${isTree(p) ? 'اكتملت أغصانها' : 'اكتمل سعفها'}${p.again ? '، وقد أعاد مراجعتها' : ''}${p.strength ? ` — قوة الحفظ ${AR(p.strength.pts)} من ${AR(p.strength.of)}` : ''}</span></div>
+    return `<div class="t-row t-wait"><div class="t-what"><b>${SP(p.surah)}</b><span class="t-line">${isTree(p) ? 'اكتملت أغصانها' : 'اكتمل سعفها'}${p.again ? '، وقد أعاد مراجعتها' : ''}${p.strength ? ` — قوة الحفظ ${AR(p.strength.pts)} من ${AR(p.strength.of)}` : ''}</span></div>
       <div class="t-grade"><button class="btn dates" data-t="grade" data-g="متقن" data-k="${k}">متقن</button><button class="btn primary" data-t="grade" data-g="جيد" data-k="${k}">جيد</button><button class="btn amber" data-t="grade" data-g="يُعاد" data-k="${k}">يُعاد</button></div></div>`; })
     .concat(justHeard.map((n) => `<div class="t-row"><div class="t-what"><b>سورة ${SURAHS[plots[n.k].surah]}: ${n.grade}</b><span class="t-line" style="color:${n.grade === 'يُعاد' ? '#8a6200' : '#b8461b'}">${n.grade === 'يُعاد' ? 'تصفرّ سعفتها الأخيرة حتى يراجعها، ثم تعود إليك هنا' : 'خُتمت الآن، فتُثمر نخلتها حين يرجع إلى بستانه'}${n.note ? ` — «${escT(n.note)}»` : ''}</span></div>
       <button class="btn light" data-t="unhear" data-k="${n.k}">تراجع</button></div>`)).join('');
   // his surahs
-  const surRows = F.ks.map((k) => { const p = plots[k], st = stageOf(p), y = st.grown - st.leaves;
+  const surRows = F.ks.filter((k) => !isJ(k)).map((k) => { const p = plots[k], st = stageOf(p), y = st.grown - st.leaves;
     const state = st.kind === 'seed' ? 'بذرة تنتظر السقي من البئر' : st.grown === L && !y ? (p.sealed ? 'مختومة' : 'كاملة، تنتظر التسميع')
       : `${AR(st.grown)} من ${AR(L)} — كل تكرار كامل يُنبت واحدة${(p.parts || 1) > 1 ? `، والسورة ${AR(p.parts)} مقاطع (هو في المقطع ${AR((p.part || 0) + 1)})` : ''}`;
     const chips = [y ? `<span class="t-chip warn">أصفر: ${AR(y)}</span>` : '', p.thorns ? '<span class="t-chip thorn">شوك</span>' : '',
@@ -3496,7 +3520,7 @@ function drawChild() {
   const pls = plaqueTexts.filter((q) => q.d.g === pg), sel = Math.min(teach.plaque || 0, Math.max(0, pls.length - 1)), cur = pls[sel];
   const own = cur && ((settings.plaques || {})[pg] || {})[cur.d.pi];
   const L2 = news().filter((n) => n.kind === 'letter').pop();
-  const c = g < NG ? chestOf(g) : null;
+  const c = g < NA ? chestOf(g) : null;
   $('tBody').innerHTML = `
     <div class="t-sum"><div><b>${AR(F.full)}</b><span>كاملة</span></div><div><b>${AR(F.sealed)}</b><span>مختومة</span></div><div><b>${AR(settings.stars || 0)}</b><span>نقاطه ★</span></div></div>
     ${teach.remote ? `<div class="row" style="margin:-2px 0 12px"><button class="btn light" data-t="garden">انظر بستانه</button></div>${teach.remote.orders.length ? `<p class="t-note" style="margin:-4px 4px 10px">ينتظر ${AR(teach.remote.orders.length)} مما أرسلتَ أن يفتح ${escT(CHILD)} البرنامج، فيصله مع ناصح.</p>` : ''}` : ''}
@@ -3506,6 +3530,7 @@ function drawChild() {
       ${waitRows || `<p class="t-note"><b>لا سورة تنتظر الآن.</b> إذا اكتمل سعف نخلة ظهرت هنا.</p>`}${key}</div>
     <div class="t-sec"><h3>سوره</h3>${surRows || '<p class="t-note">لم يزرع نخلة بعد.</p>'}</div>
     ${hafizSec()}
+    ${juzSec()}
     <div class="t-sec"><h3>الورد</h3>
       <div class="t-row"><span class="t-what">أكثر آيات المقطع في السورة الطويلة</span>${stepT('portionMax', settings.portionMax || 5, 'آيات المقطع')}</div>
       <div class="t-row"><span class="t-what">تكرار كل آية وحدها (ومثله الصدى)</span>${stepT('chainOne', settings.chainOne || 3, 'تكرار الآية')}</div>
@@ -3523,12 +3548,12 @@ function drawChild() {
     <div class="t-sec"><h3>هدية لبستانه</h3><p class="t-note">زهرة تصل إلى خزانته، فيزرعها حيث شاء.</p>
       <div class="t-flowers">${['وردة حمراء', 'وردة صفراء', 'وردة بيضاء'].filter((n) => ITEM[n]).map((n) => `<button data-t="gift" data-name="${n}"><svg data-thumb="${n}" aria-hidden="true"></svg>${dname(n).replace('الزهرة ', '')}</button>`).join('')}</div>
       <div class="t-sent" id="tGiftSent"></div></div>
-    ${c ? `<div class="t-sec"><h3>جائزة كنز البستان ${ORDF[g]}</h3><p class="t-note">يراها في صندوق البستان المقفل، ويفتحه حين يكتمل مفتاحه.</p>
+    ${c ? `<div class="t-sec"><h3>جائزة كنز ${BST(g)}</h3><p class="t-note">يراها في صندوق البستان المقفل، ويفتحه حين يكتمل مفتاحه.</p>
       <div class="chest-set t-chest"><select id="chFrom" aria-label="الجائزة من">${Object.keys(CHEST_FROM).map((f) => `<option${f === c.from ? ' selected' : ''}>${f}</option>`).join('')}</select>
       <input id="chWhat" type="text" maxlength="40" value="${escT(c.what)}" aria-label="الجائزة">
       <label><input type="checkbox" id="chSecret"${c.secret ? ' checked' : ''}> سرّية حتى يفتحه</label></div></div>` : ''}`;
   $('tBody').querySelectorAll('svg[data-thumb]').forEach((s) => thumb(s, s.dataset.thumb));
-  wirdRule();
+  wirdRule(); juzRule();
   if (teach.readonly) {
     $('tBody').querySelectorAll('.t-grade, [data-t="unhear"], .t-step button, #tNote').forEach((e) => e.remove());
     ['tLetter', 'tPl1'].forEach((id) => { const e = $(id); if (e) e.closest('.t-sec').remove(); });
@@ -3539,26 +3564,51 @@ function drawChild() {
 // tests a child who already knows, and gives him the palms of the surahs he knows — complete, sealed with his grade — and their
 // gardens open; no points come with them (points are for work done here); he waters them in review like any other
 function hafizSec() {
-  const top = Object.keys(plots).filter((k) => plots[k].sealed).reduce((m, k) => Math.max(m, plots[k].surah), -1);
+  const top = Object.keys(plots).filter((k) => plots[k].sealed && !isJ(plots[k].surah)).reduce((m, k) => Math.max(m, plots[k].surah), -1);
   return `<div class="t-sec"><h3>طالب حافظ</h3><p class="t-note">إذا كان يحفظ من قبل فاختبره، ثم اختر آخر سورة اختبرته فيها بالترتيب: تُزرع نخلات السور من الفاتحة إليها كاملةً مختومةً بتقديرك، وتُفتح بساتينها، بلا نقاط، ويسقيها مراجعةً كغيرها.</p>
-    <div class="t-field"><select id="tHafiz" aria-label="آخر سورة اختبرته فيها">${SURAHS.map((n, i) => `<option value="${i}"${i === Math.min(SURAHS.length - 1, top + 1) ? ' selected' : ''}>${AR(i + 1)}. ${n}</option>`).join('')}</select>
+    <div class="t-field"><select id="tHafiz" aria-label="آخر سورة اختبرته فيها">${SURAHS.slice(0, TREES.length).map((n, i) => `<option value="${i}"${i === Math.min(TREES.length - 1, top + 1) ? ' selected' : ''}>${AR(i + 1)}. ${n}</option>`).join('')}</select>
     <div class="row"><button class="btn dates" data-t="hafiz" data-g="متقن">متقن</button><button class="btn primary" data-t="hafiz" data-g="جيد">جيد</button></div></div>
     <div class="t-sent" id="tHafizSent"></div></div>`;
+}
+// أبو حفص (22 Nov): «لا ينتقل الطالب إلى أي بستان حتى يختم له المعلم أنه حفظ فيحصل على الأشجار ويفتح له البستان وينتقل إليه
+// وتبدأ دورة المراجعة»: the teacher tests him in a whole juz and seals it here; its garden opens with its four palms whole and
+// sealed (sealed again, they come back whole). And how many of the juz palms he waters each day (one: five pages)
+const daysW = (n) => (n === 1 ? 'يوم واحد' : n === 2 ? 'يومين' : n <= 10 ? `${AR(n)} أيام` : `${AR(n)} يومًا`);
+function juzSec() {
+  const A = settings.ajza || {}, n = Math.max(1, settings.juzDaily || 1);
+  const rows = Object.keys(A).map(Number).sort((a, b) => b - a).map((j) => {
+    const ks = inGarden(gOfJuz(j)), alive = ks.filter((k) => plots[k]), y = alive.filter(isThirsty).length, th = alive.filter((k) => (plots[k].thorns || 0) > 0).length;
+    const dead = PER - alive.length, today = alive.filter((k) => needsWater(plots[k])).length;
+    const chips = [`<span class="t-chip seal">${A[j].grade}</span>`, !jReady(j) ? '<span class="t-chip">صفحاته لم تُرفع بعد</span>' : '', today ? `<span class="t-chip">يسقي اليوم: ${AR(today)}</span>` : '',
+      y ? `<span class="t-chip warn">أصفر: ${AR(y)}</span>` : '', th ? '<span class="t-chip thorn">شوك</span>' : '', dead ? `<span class="t-chip warn">ماتت: ${AR(dead)}</span>` : ''].join('');
+    return `<div class="t-row" style="display:block"><b>الجزء ${AR(j)}</b><span class="t-line" style="display:inline"> — من ${JUZ[j].start}</span><div class="t-chips">${chips}</div></div>`; }).join('');
+  const opts = Array.from({ length: NJ }, (_, i) => NJ - i).map((j) => `<option value="${j}">الجزء ${AR(j)} — من ${JUZ[j].start}${A[j] ? ' ✓' : ''}${jReady(j) ? '' : ' (لم تُرفع صفحاته)'}</option>`).join('');
+  return `<div class="t-sec"><h3>الأجزاء بعد جزء عمّ</h3><p class="t-note">إذا حفظ جزءًا كاملًا فاختبره فيه، ثم اختره هنا واختمه: يُفتح له بستانه بنخلاته الأربع (كل نخلة خمس صفحات) مختومةً بتقديرك، ثم يسقيها مراجعةً بالدور. وإذا ختمتَه مرة أخرى عادت نخلاته كاملةً إن ذبلت أو ماتت.</p>
+    <div class="t-field"><select id="tJuz" aria-label="الجزء الذي اختبرته فيه">${opts}</select>
+    <div class="row"><button class="btn dates" data-t="juz" data-g="متقن">متقن</button><button class="btn primary" data-t="juz" data-g="جيد">جيد</button></div></div>
+    <div class="t-sent" id="tJuzSent"></div>${rows}
+    <div class="t-row"><span class="t-what">نخلات الأجزاء التي يسقيها كل يوم (النخلة خمس صفحات)</span>${stepT('juzDaily', n, 'نخلات المراجعة كل يوم')}</div>
+    <p class="t-note" id="tJuzRule"></p></div>`;
+}
+function juzRule() {
+  const r = $('tJuzRule'); if (!r) return; const n = Math.max(1, settings.juzDaily || 1), L = jList().length, d = L ? Math.ceil(L / n) : 0;
+  r.textContent = `كل يوم ${n === 1 ? 'نخلة واحدة' : n === 2 ? 'نخلتان' : `${AR(n)} نخلات`} (${AR(5 * n)} صفحات) يستمع إليها من الشيخ فيسقيها${L ? `، فتدور المراجعة على نخلات أجزائه (${AR(L)}) في ${daysW(d)}` : ''}.`;
 }
 // his days, as the one who reads them sees them (the teacher, the father, or the parent)
 function logLines(n) {
   return log.slice(-n).reverse().map((e) => {
     let what = '';
-    if (e.kind === 'wird') what = `ورد سورة ${SURAHS[e.surah]}: ${ayRange(e.from, e.to)}، قرأها ${reps(e.reps)}${e.test ? `، وقوة الحفظ ${AR(e.test.pts)} من ${AR(e.test.of)}` : ''}`;
+    if (e.kind === 'wird') what = `ورد ${SP(e.surah)}: ${ayRange(e.from, e.to)}، قرأها ${reps(e.reps)}${e.test ? `، وقوة الحفظ ${AR(e.test.pts)} من ${AR(e.test.of)}` : ''}`;
     else if (e.kind === 'review') what = `مراجعة مع ناصح: ${(e.surahs || []).filter((s) => s != null).map((s) => SURAHS[s]).join('، ')}`;
-    else if (e.kind === 'hear') what = `سمّع سورة ${SURAHS[e.surah]} ${who('لك', 'لك', 'لشيخه')}: <b>${e.grade}</b>${e.note ? ` — «${escT(e.note)}»` : ''}`;
+    else if (e.kind === 'hear') what = `سمّع ${SP(e.surah)} ${who('لك', 'لك', 'لشيخه')}: <b>${e.grade}</b>${e.note ? ` — «${escT(e.note)}»` : ''}`;
     else if (e.kind === 'heard') what = `سمّع وردَه لأهله، فنال ${POINTS(HEARD_STARS)}`;
     else if (e.kind === 'letter') what = 'أُرسلت إليه رسالة مع ناصح';
-    else if (e.kind === 'hafiz') what = `اختُبر فأُعطي نخلات سوره إلى سورة ${SURAHS[e.upto]}: <b>${e.grade}</b>`;
+    else if (e.kind === 'juz') what = `اختُبر في الجزء ${AR(e.juz)} فخُتم له: <b>${e.grade}</b>`;
+    else if (e.kind === 'hafiz') what = `اختُبر فأُعطي نخلات سوره إلى ${SP(e.upto)}: <b>${e.grade}</b>`;
     else if (e.kind === 'gift') what = `أُهدي ${dname(e.name)}`;
     else if (e.kind === 'plaque') what = `أُهديت له لوحة: «${escT(e.lines.join(' '))}»`;
-    else if (e.kind === 'died') what = `ماتت شجرة سورة ${SURAHS[e.surah]} لأن سقيها تُرك`;
-    else if (e.kind === 'listen' || e.kind === 'more') what = `${e.kind === 'more' ? 'استزاد من' : 'استمع إلى'} سورة ${SURAHS[e.surah]} مع الشيخ`;
+    else if (e.kind === 'died') what = `ماتت شجرة ${SP(e.surah)} لأن سقيها تُرك`;
+    else if (e.kind === 'listen' || e.kind === 'more') what = `${e.kind === 'more' ? 'استزاد من' : 'استمع إلى'} ${SP(e.surah)} مع الشيخ`;
     else return '';
     return `<div class="t-row"><span class="when">${ago(e.t)}</span><span class="t-what">${what}</span></div>`; }).join('');
 }
@@ -3566,7 +3616,7 @@ function wirdRule() {
   const r = $('tRule'); if (!r) return; const n = settings.portionMax || 5, a = settings.chainOne || 3, j = settings.chainJoin == null ? 3 : settings.chainJoin, d = settings.reviewEvery || 1;
   r.textContent = `التكرار الواحد: يقرأ مع الشيخ كل آية ${times(a)}${j ? `، ويصلها بما قبلها ${times(j)}، حتى آخر السورة، ثم يقرأ من الآية الثانية إلى الآخر ${times(j)}، ثم من الثالثة، حتى تتساوى الآيات` : ''}. وكل تكرار كامل يُنبت غصنًا، والأغصان خمسة، وبعد الخامس الصدى. والسورة القصيرة تُكرَّر كلها، والطويلة مقاطع ${n <= 2 ? (n === 1 ? 'آية واحدة' : 'آيتين') : AR(n) + ' آيات'} على الأكثر. وبعد الختم يسقيها ${d === 1 ? 'كل يوم' : `كل ${AR(d)} أيام`}، وإن تركها اصفرّت.`;
 }
-const T_LIMITS = { portionMax: [1, 10, 5], chainOne: [1, 10, 3], chainJoin: [0, 10, 3], reviewEvery: [1, 7, 1] };
+const T_LIMITS = { portionMax: [1, 10, 5], chainOne: [1, 10, 3], chainJoin: [0, 10, 3], reviewEvery: [1, 7, 1], juzDaily: [1, 8, 1] };
 $('tBody').addEventListener('click', (e) => {
   const s = e.target.closest('[data-stu]');
   if (s) { if (+s.dataset.stu === 0) { teach.view = 'child'; drawTeach(); $('tBody').scrollTop = 0; } else tSay(s, 'هذا مثال للعرض فقط'); return; }
@@ -3599,14 +3649,22 @@ $('tBody').addEventListener('click', (e) => {
       q.upto = nx === a0 ? 0 : nx - 1; save(); b.parentNode.querySelector('output').textContent = AR(nx); return;
     }
     const [lo, hi, def] = T_LIMITS[key], v = Math.min(hi, Math.max(lo, (settings[key] == null ? def : settings[key]) + d));
-    return teachAct({ t: 'set', key, v }, () => { b.parentNode.querySelector('output').textContent = AR(v); wirdRule(); });
+    return teachAct({ t: 'set', key, v }, () => { b.parentNode.querySelector('output').textContent = AR(v); wirdRule(); juzRule(); });
   }
   if (t === 'hafiz') {
     const upto = +$('tHafiz').value, grade = b.dataset.g;
-    return modal(`<h3>طالب حافظ</h3><p class="a-msg">تُزرع نخلات ${AR(upto + 1)} ${upto + 1 > 10 ? 'سورة' : upto ? 'سور' : 'سورة'}، من الفاتحة إلى سورة <b>${SURAHS[upto]}</b>، كاملةً مختومةً بتقدير «${grade}».</p>
+    return modal(`<h3>طالب حافظ</h3><p class="a-msg">تُزرع نخلات ${AR(upto + 1)} ${upto + 1 > 10 ? 'سورة' : upto ? 'سور' : 'سورة'}، من الفاتحة إلى ${SP(upto, 1)}، كاملةً مختومةً بتقدير «${grade}».</p>
       <div class="row"><button class="btn primary" data-yes>أعطه زروعها</button><button class="btn light" data-close>إلغاء</button></div>`, (x) => {
       if (!x.hasAttribute('data-yes')) return;
-      closeModal(); teachAct({ t: 'hafiz', upto, grade }, () => { drawTeach(); const e = $('tHafizSent'); if (e) e.textContent = `أُعطي نخلات سوره إلى سورة ${SURAHS[upto]} بتقدير «${grade}».`; });
+      closeModal(); teachAct({ t: 'hafiz', upto, grade }, () => { drawTeach(); const e = $('tHafizSent'); if (e) e.textContent = `أُعطي نخلات سوره إلى ${SP(upto)} بتقدير «${grade}».`; });
+    });
+  }
+  if (t === 'juz') {
+    const j = +$('tJuz').value, grade = b.dataset.g, again = !!(settings.ajza || {})[j];
+    return modal(`<h3>ختم الجزء ${AR(j)}</h3><p class="a-msg">${again ? `ختمتَ هذا الجزء من قبل، فتعود نخلاته الأربع كاملةً مخضرّة` : `يُفتح له <b>بستان الجزء ${AR(j)}</b> (من ${JUZ[j].start}) بنخلاته الأربع`}، مختومةً بتقدير «${grade}».${jReady(j) ? '' : ' ولا يسقيها حتى تُرفع صفحات هذا الجزء.'}</p>
+      <div class="row"><button class="btn primary" data-yes>اختمه</button><button class="btn light" data-close>إلغاء</button></div>`, (x) => {
+      if (!x.hasAttribute('data-yes')) return;
+      closeModal(); teachAct({ t: 'juz', juz: j, grade }, () => { drawTeach(); const e = $('tJuzSent'); if (e) e.textContent = `خُتم له الجزء ${AR(j)} بتقدير «${grade}».`; });
     });
   }
   if (t === 'letter') {
@@ -3637,7 +3695,7 @@ function setPlaque(g, pi, lines) {
   if (lines) (P[g] || (P[g] = {}))[pi] = lines; else if (P[g]) delete P[g][pi];
   save();
   const q = plaqueTexts.find((x) => x.d.g === g && x.d.pi === pi); if (!q) return;
-  const words = lines || ART.grasses[g].deco.filter((d) => d.kind === 'plaque')[pi].lines, holder = q.lines[0].parentNode;
+  const words = lines || GR(g).deco.filter((d) => d.kind === 'plaque')[pi].lines, holder = q.lines[0].parentNode;
   q.lines.forEach((t) => t.remove()); q.d.lines = words;
   q.lines = words.map((line, n) => { const t = el('text', { class: 'plaque-text', x: q.d.bx, y: q.d.ty + n * q.d.lh, 'font-size': q.d.fs }, holder); t.textContent = line; return t; });
   centerPlaques();
@@ -3660,11 +3718,12 @@ function deliverNews() {
   if (note) parts.push(['قال', `لك: «${escT(note)}»`]);
 
   const notes = N.filter((n) => n.kind === 'note').map((n) => n.text);
-  const hz = N.filter((n) => n.kind === 'hafiz').pop();
-  if (hz) parts.push(['اختبرك', `فأعطاك نخلات سورك من الفاتحة إلى سورة <b>${SURAHS[hz.upto]}</b> مختومةً بتقدير «${hz.grade}»`]);
+  const hz = N.filter((n) => n.kind === 'hafiz').pop(), jz = N.filter((n) => n.kind === 'juz' && plots[PER * gOfJuz(n.juz)]);
+  if (jz.length) parts.push(['ختم', `لك حفظ ${jz.length > 1 ? 'الأجزاء' : 'الجزء'} <b>${jz.map((n) => AR(n.juz)).join(' و')}</b> بتقدير «${jz[jz.length - 1].grade}»، ففُتح لك ${jz.length > 1 ? 'بساتينها' : 'بستانه'} بنخلاته الأربع، كل نخلة خمس صفحات، وتبدأ مراجعتها بالدور${jz.some((n) => !jReady(n.juz)) ? ' حين تصل صفحاته' : ''}`]);
+  if (hz) parts.push(['اختبرك', `فأعطاك نخلات سورك من الفاتحة إلى ${SP(hz.upto, 1)} مختومةً بتقدير «${hz.grade}»`]);
   if (gifts.length) parts.push(['أهداك', `${gifts.map(dname).join(' و')}، تجدها في خزانتك فتضعها في بستانك حيث شئت`]);
   if (letter) parts.push(['أرسل', `إليك ${letter > 1 ? 'رسائل' : 'رسالة'}، وسأطير لأحضرها لك`]);
-  let msg = parts.length ? `${seals.length || hz ? 'ما شاء الله! ' : again.length ? `يا ${CHILD}، ` : 'أبشر! '}` + parts.map(([v, rest], i) => (i ? 'و' + v : `${v} ${from}`) + ' ' + rest).join('، ') + '.' : '';
+  let msg = parts.length ? `${seals.length || hz || jz.length ? 'ما شاء الله! ' : again.length ? `يا ${CHILD}، ` : 'أبشر! '}` + parts.map(([v, rest], i) => (i ? 'و' + v : `${v} ${from}`) + ' ' + rest).join('، ') + '.' : '';
   // a piece of the hut for each surah of جزء عمّ his sheikh seals
   const hutN = typeof hutEarned === 'function' ? hutEarned() : 0, hutWas = settings.hutTold || 0;
   if (hutN > hutWas) { settings.hutTold = hutN; autoSave(); { const d = hutN - hutWas; msg += `${msg ? ' ' : ''}وجاءتك ${d === 1 ? 'قطعة جديدة' : d === 2 ? 'قطعتان جديدتان' : d <= 10 ? `${AR(d)} قطع جديدة` : `${AR(d)} قطعة جديدة`} لبناء <b>الكوخ</b>، تجدها في بستانه بجانب البستان الأول.`; } }
@@ -3672,8 +3731,11 @@ function deliverNews() {
   if (parentHeard) msg = msg ? `${msg} وسمع أهلك وردك اليوم، فلك ${POINTS(HEARD_STARS)} ★` : `أحسنت! سمع أهلك وردك اليوم، فلك ${POINTS(HEARD_STARS)} ★`;
   let t = 0;
   const newHz = hz ? Object.keys(plots).map(Number).filter((k) => plots[k].hafiz && slotEls[k] && !slotEls[k].g.classList.contains('has-trunk')).sort((a, b) => a - b) : [];
-  const show = seals.concat(again, newHz);
-  if (show.length) { scrollToSlot(show[0]); setTimeout(() => { show.forEach((k) => render(k, true)); count(); }, STILL ? 0 : 450); t = STILL ? 0 : 1900; }
+  const newJz = jz.flatMap((n) => inGarden(gOfJuz(n.juz))).filter((k) => plots[k] && slotEls[k] && !slotEls[k].g.classList.contains('has-trunk'));
+  if (jz.length) { markLocks(); jz.forEach((n) => drawPrizes(gOfJuz(n.juz))); }
+  const show = newJz.length ? newJz.concat(seals, again, newHz) : seals.concat(again, newHz);
+  // (a juz's garden: ناصح takes him there even when its palms were drawn already, as the orders came)
+  if (show.length || jz.length) { scrollToSlot(jz.length ? PER * gOfJuz(jz[jz.length - 1].juz) : show[0]); setTimeout(() => { show.forEach((k) => render(k, true)); count(); }, STILL ? 0 : 450); t = STILL ? 0 : 1900; }
   else if (plq) { const q = plaqueTexts.find((x) => x.d.g === plq.g && x.d.pi === plq.pi); if (q) scrollToSlotX(plq.g, q.d.x); t = STILL ? 0 : 700; }
   if (msg) setTimeout(() => tell(msg), t);
   // the letters wait in his garden until he has read them (mail, below); ناصح brings the first when he is free
@@ -3703,14 +3765,16 @@ function renderMap() {
     const g = D.g, open = gardenOpen(g) && ceremonyFor !== g, ks = inGarden(g), done = ks.filter(complete).length; full += done;
     const b = document.createElement('button'); b.type = 'button'; b.className = 'map-card ' + (g % 2 ? 'l' : 'r') + (open ? '' : ' shut') + (g === cur ? ' here' : '');
     b.style.background = `linear-gradient(${S.top}, #eaf7fb)`;
-    b.setAttribute('aria-label', `البستان ${ORDF[g]}: ` + (open ? `${AR(done)} من ${AR(PER)} نخلات كاملة` : 'مقفل'));
+    b.setAttribute('aria-label', `${BST(g)}: ` + (open ? `${AR(done)} من ${AR(PER)} نخلات كاملة` : 'مقفل'));
+    if (isJG(g)) b.classList.add('juz');
     const svg = el('svg', { viewBox: `0 ${MAP_TOP.toFixed(1)} ${ART.W} ${(ART.H - MAP_TOP).toFixed(1)}`, 'aria-hidden': 'true' }, b);
-    el('image', { x: 0, y: MAP_TOP.toFixed(1), width: ART.W, height: (ART.H - MAP_TOP).toFixed(1), preserveAspectRatio: 'none' }, svg).setAttribute('href', ART.grasses[g].thumb);
+    el('image', { x: 0, y: MAP_TOP.toFixed(1), width: ART.W, height: (ART.H - MAP_TOP).toFixed(1), preserveAspectRatio: 'none' }, svg).setAttribute('href', GR(g).thumb);
     const wrap = el('g', { class: 'gd' + (open ? '' : ' locked') }, svg);
     [D.plaques, D.slots].forEach((layer) => { const c = layer.cloneNode(true); c.querySelectorAll('[tabindex]').forEach((e) => { e.removeAttribute('tabindex'); e.removeAttribute('role'); }); wrap.appendChild(c); });
-    const name = document.createElement('span'); name.className = 'map-name'; name.textContent = gname(g) ? `${gname(g)} (${ORDF[g]})` : `البستان ${ORDF[g]}`; b.appendChild(name);
+    const name = document.createElement('span'); name.className = 'map-name'; name.textContent = gname(g) ? `${gname(g)} (${isJG(g) ? 'الجزء ' + AR(juzOfG(g)) : ORDF[g]})` : BST(g); b.appendChild(name);
     const st = document.createElement('span'); st.className = 'map-state';
-    if (open) st.textContent = done === PER ? 'اكتملت نخلاته ★' : `${AR(done)} من ${AR(PER)} كاملة`;
+    if (open) st.textContent = isJG(g) ? 'ختمه شيخك ★' : done === PER ? 'اكتملت نخلاته ★' : `${AR(done)} من ${AR(PER)} كاملة`;
+    else if (isJG(g)) { const k = el('svg', { class: 'padl', viewBox: '-12 -20 24 30' }, st); padlock(k, '', ''); st.append(`من ${JUZ[juzOfG(g)].start}`); }
     else if (g === next || g === ceremonyFor) { const k = el('svg', { viewBox: '0 0 124 48' }, st); const have = g === ceremonyFor ? PER : inGarden(g - 1).filter(complete).length; keyDrawing(k, have, have >= PER); st.append(`المفتاح ${AR(have)} من ${AR(PER)}`); }
     else { const k = el('svg', { class: 'padl', viewBox: '-12 -20 24 30' }, st); padlock(k, '', ''); st.append('مقفل'); }
     b.appendChild(st);
@@ -3718,8 +3782,8 @@ function renderMap() {
     b.addEventListener('click', () => { closeMap(); scroller.scrollTo({ left: -stopOf(g) * STEP, behavior: 'auto' }); near(); count(); });
     list.appendChild(b);
   });
-  const opened = Math.min(NG, settings.opened || 1);
-  $('mapSum').textContent = `فتحتَ ${AR(opened)} من ${AR(NG)} — والنخلات الكاملة ${AR(full)}`;
+  const opened = Math.min(NA, settings.opened || 1), nj = Object.keys(settings.ajza || {}).length;
+  $('mapSum').textContent = `بساتين جزء عمّ: فتحتَ ${AR(opened)} من ${AR(NA)}${nj ? ` — والأجزاء: ${AR(nj)}` : ''} — والنخلات الكاملة ${AR(full)}`;
 }
 // the dotted path, from the middle of each garden to the next, curving between them
 function drawMapPath() {
@@ -3755,7 +3819,7 @@ function birdVisit(target, atArrival, done) {
 }
 function openGarden(gi) {
   ceremonyFor = gi; drawPrizes(gi); drawKey();
-  toast(`اكتمل مفتاح البستان ${ORDF[gi]}!`);
+  toast(`اكتمل مفتاح ${BST(gi)}!`);
   scrollToPage(stopOf(gi));
   setTimeout(() => {
     const D = gds[gi], chest = D.el.querySelector('.prize.chest');
@@ -3766,7 +3830,7 @@ function openGarden(gi) {
       setTimeout(() => { ceremonyFor = null; markLocks(); drawPrizes(gi); count(); }, STILL ? 0 : 1800);
     }, () => {
       const c = chestOf(gi), cp = pageOf(gi, D.prizeAt.chest.x * CMU), where = cp === page() ? 'فاضغط عليه لتفتحه!' : `وهو في الشاشة ${ORD[stopInfo(cp).scr]}، فاسحب إليه واضغط عليه لتفتحه!`;
-      tell(`ما شاء الله! فتحتَ <b>البستان ${ORDF[gi]}</b> بمفتاحه، وفتح المفتاح كنزه: فيه جائزة من ${c.from}، ${where}`);
+      tell(`ما شاء الله! فتحتَ <b>${BST(gi)}</b> بمفتاحه، وفتح المفتاح كنزه: فيه جائزة من ${c.from}، ${where}`);
     });
   }, STILL ? 0 : 1200);
 }
@@ -3784,7 +3848,7 @@ function near() {
   gds.forEach((D) => {
     const x0 = XR + D.g * SW + (D.g > WELL_G ? MIDN * SW / PER : 0), on = x0 + SW > s - SW && x0 < s + w + SW;      // its place, from the right
     D.el.classList.toggle('far', !on);
-    if (on && !D.loaded) { D.img.setAttribute('href', ART.grasses[D.g].img); D.loaded = true; }
+    if (on && !D.loaded) { D.img.setAttribute('href', GR(D.g).img); D.loaded = true; }
     else if (D.loaded && (x0 + SW < s - 2 * SW || x0 > s + w + 2 * SW)) { D.img.removeAttribute('href'); D.loaded = false; }
   });
 }
@@ -3814,7 +3878,7 @@ function render(k, animate = true) {
   if (!fruiting && s.fruit) { s.fruit.remove(); s.fruit = null; }
   const ws = waterState(k);      // the bucket: empty while the plant waits for water, full when ناصح has brought it
   s.g.classList.toggle('thirsty', !!ws); s.g.classList.toggle('has-water', ws === 'full'); markWellBucket();
-  s.g.setAttribute('aria-label', p ? `${plantName(p)} سورة ${SURAHS[p.surah]}` : 'حفرة فارغة: اضغط لتزرع');
+  s.g.setAttribute('aria-label', p ? `${plantName(p)} ${SP(p.surah)}` : 'حفرة فارغة: اضغط لتزرع');
   const label = p ? SURAHS[p.surah] : '';
   s.txt.textContent = label;
   const w = Math.max(44, label.length * 7.4 + 18); s.rect.setAttribute('width', w); s.rect.setAttribute('x', -w / 2);
@@ -3955,7 +4019,30 @@ function renderAll(animate) { slotEls.forEach((_, k) => render(k, animate)); cou
 // the bucket beside a plant: 'full' when ناصح has brought it filled from the well; 'empty' while it waits for water — a seed, or a
 // sealed tree on its day of review (أبوحفص: «يكون هناك دلو ماء ويكون فارغا يظهر في اليوم التالي»). A day missed takes the bucket
 // away («يختفي الدلو في اليوم التالي وتصفر السعفة»); then a tap on the tree sends the child to the well
-const dueToday = (p) => !!p && !!p.sealed && !!p.watered && !(p.neglect > 0) && dayN(todayKey()) - dayN(p.lastWater || todayKey()) >= (settings.reviewEvery || 1);
+const dueToday = (p) => !!p && !!p.sealed && !!p.watered && !(p.neglect > 0) && dayN(todayKey()) >= dueDay(p);
+// the day a sealed plant waits for its water: a surah of جزء عمّ every few days (the teacher's number); a palm of a juz on its
+// day in the cycle of review (below)
+function dueDay(p) { return isJ(p.surah) ? jDue(p) : dayN(p.lastWater || todayKey()) + (settings.reviewEvery || 1); }
+// أبو حفص: «وتبدأ دورة المراجعة»: the juz palms are reviewed in turn, each day the teacher's number of them (one: five pages),
+// from the first juz after جزء عمّ (the twenty-ninth) and its first palm, round and round. A palm's days are those of its place
+// in the turn; missed, it yellows as any other, and waits for its water while the turn goes on to the next. Laid out again when
+// a juz is added or a palm dies (no day before that is counted against him); a juz whose pages have not come yet waits outside
+function jList() { return Object.keys(plots).map(Number).filter((k) => isJ(k) && plots[k] && plots[k].sealed && plots[k].watered && jReady(jOf(k))).sort((a, b) => a - b); }
+function jLayout() {
+  const L = jList(), n = Math.max(1, settings.juzDaily || 1), sig = L.join(',') + '/' + n, C = settings.jcyc;
+  if (C && C.sig === sig) return C;
+  const now = dayN(todayKey());
+  L.forEach((k, i) => { plots[k].jslot = Math.floor(i / n); plots[k].counted = Math.max(plots[k].counted || 0, now); });
+  return (settings.jcyc = { sig, base: now, len: Math.max(1, Math.ceil(L.length / n)) });
+}
+function jDue(p) {
+  if (!jReady(jOf(p.surah))) return Infinity;
+  const C = jLayout(); if (p.jslot == null) return Infinity;
+  const lw = dayN(p.lastWater || todayKey()), r = (((p.jslot - (lw + 1 - C.base)) % C.len) + C.len) % C.len;
+  return lw + 1 + r;
+}
+// today's palms of the cycle, for the teacher's screen and ناصح
+const jToday = () => jList().filter((k) => needsWater(plots[k]));
 function needsWater(p) {
   if (!p || p.water === 'full') return false;
   if (!p.watered) return true;
@@ -3973,14 +4060,14 @@ function passDays_() {
   const now = dayN(todayKey()), died = [];
   Object.keys(plots).forEach((k) => {
     const p = plots[k]; if (!p.sealed || !p.watered) return;
-    const due = dayN(p.lastWater || todayKey()) + (settings.reviewEvery || 1), missed = Math.max(0, now - Math.max(due, p.counted || 0));
+    const due = dueDay(p), missed = due === Infinity ? 0 : Math.max(0, now - Math.max(due, p.counted || 0));
     if (!missed) return;
     p.counted = now; p.neglect = Math.min(DIE_AT, (p.neglect || 0) + missed);
     if (p.neglect >= 6) p.thorns = Math.min(3, Math.max(p.thorns || 0, 1 + Math.floor((p.neglect - 6) / 2)));
     if (p.neglect >= DIE_AT) died.push(+k);
   });
   died.forEach((k) => { addLog({ kind: 'died', surah: plots[k].surah }); settings.dead = (settings.dead || []).concat([{ k, surah: plots[k].surah, kind: plots[k].kind || null }]); delete plots[k]; });
-  save();
+  jLayout(); save();
 }
 const inGarden = (g) => Array.from({ length: PER }, (_, i) => PER * g + i);
 const complete = (k) => !!plots[k] && stageOf(plots[k]).leaves === settings.leaves;
@@ -3993,14 +4080,20 @@ function count() {
   app.classList.toggle('on-small', !!P.small); app.classList.toggle('on-q', P.small === 'q');
   if (P.small) { const m = SMALLS[P.si]; $('gardenName').textContent = m.name; $('gardenCount').textContent = m.sub; $('gardenSign').classList.remove('named', 'can-name'); drawKey(); return; }
   const g = curG(), ks = inGarden(g), planted = ks.filter((k) => plots[k]).length, full = ks.filter(complete).length;
-  $('gardenName').textContent = gname(g) || `البستان ${ORDF[g]}`; $('gardenSign').classList.toggle('named', !!gname(g)); $('gardenSign').classList.toggle('can-name', gardenOpen(g) && !VIEW_ONLY);
+  if (isJG(g)) {
+    const j = juzOfG(g), green = ks.filter((k) => plots[k] && !isThirsty(k)).length;
+    $('gardenName').textContent = gname(g) || BST(g); $('gardenSign').classList.toggle('named', !!gname(g)); $('gardenSign').classList.toggle('can-name', gardenOpen(g) && !VIEW_ONLY);
+    $('gardenCount').textContent = !gardenOpen(g) ? `من ${JUZ[j].start} — يفتحه شيخك حين تحفظه` : !jReady(j) ? `من ${JUZ[j].start} — صفحاته في الطريق إليك` : `المخضرّة ${AR(green)} من ${AR(PER)} — كل نخلة خمس صفحات`;
+    drawKey(); return;
+  }
+  $('gardenName').textContent = gname(g) || `${BST(g)}`; $('gardenSign').classList.toggle('named', !!gname(g)); $('gardenSign').classList.toggle('can-name', gardenOpen(g) && !VIEW_ONLY);
   $('gardenCount').textContent = gardenOpen(g) && ceremonyFor !== g ? `المزروع ${AR(planted)} من ${AR(PER)} — الكاملة ${AR(full)}` : 'مقفل حتى يكتمل مفتاحه';
   drawKey();
 }
 // a garden opens when the four palms of the one before it are complete (and stays open after that)
 function checkOpen() {
   const was = settings.opened || 1; let n = was;
-  while (n < NG && inGarden(n - 1).every(complete)) n++;
+  while (n < NA && inGarden(n - 1).every(complete)) n++;
   if (n === was) return;
   settings.opened = n; save();
   for (let g = was; g < n - 1; g++) drawPrizes(g);         // (more than one at once: only the last gets the ceremony)
@@ -4029,20 +4122,23 @@ function openPlot(k) {
   if (placing) return;
   if (hunt.on) return huntTapPalm(k);
   const g = holes[k].g;
-  if (!gardenOpen(g)) return tell(`هذا <b>البستان ${ORDF[g]}</b>، وما زال مقفلًا. يُفتح بمفتاحه، والمفتاح يكتمل حين تكتمل نخلات البستان ${ORDF[g - 1]} الأربع.`);
+  if (!gardenOpen(g) && isJG(g)) return tell(`هذا <b>${BST(g)}</b>، يبدأ من سورة <b>${JUZ[juzOfG(g)].start}</b>. يفتحه شيخك حين تحفظ الجزء كله ويختبرك فيه، فتأتيك نخلاته الأربع كاملةً، كل نخلة خمس صفحات.`);
+  if (!gardenOpen(g)) return tell(`هذا <b>${BST(g)}</b>، وما زال مقفلًا. يُفتح بمفتاحه، والمفتاح يكتمل حين تكتمل نخلات ${BST(g - 1)} الأربع.`);
   current = k; const p = plots[k];
   if (settings.testMode && p) return drawPlot();          // the test tools, in the test numbers' «وضع التجربة»
+  if (!p && isJG(g)) return tell(`هنا كانت نخلة ${SP(k, 1)}، فماتت لأن سقيها تُرك. راجع صفحاتها مع شيخك، فإذا اختبرك في الجزء وختمه عادت إليك نخلاته.`);
   if (!p) return askEmpty(k);
+  if (isJ(k) && !jReady(jOf(k))) return tell(`نخلة ${SP(k, 1)} مختومة. لا تحتاج نخلات هذا الجزء إلى سقي حتى تصل صفحاته وتلاوتها إلى البرنامج، وسأخبرك حين تصل.`);
   if (p.water === 'full') return waterNow(k);
-  const st = stageOf(p), name = `${plantName(p)} سورة <b>${SURAHS[p.surah]}</b>`, toWell = [['well', 'خذني إلى البئر', 'primary'], ['later', 'لاحقًا']];
+  const st = stageOf(p), name = `${plantName(p)} ${SP(p.surah, 1)}`, toWell = [['well', 'خذني إلى البئر', 'primary'], ['later', 'لاحقًا']];
   if (p.water === 'well') return ask(`دلو ${name} عند <b>البئر</b>، ينتظر أن تستمع إلى قراءة الشيخ ليمتلئ.`, toWell, (a) => a === 'well' && goWell(k));
-  if (!p.watered) return ask(`بذرة ${plantName(p)} سورة <b>${SURAHS[p.surah]}</b> بحاجة إلى سقي لتنمو. احصل على الماء من <b>البئر</b> في البستان الذي بين البستان الأول والثاني.`, toWell, (a) => a === 'well' && goWell(k));
+  if (!p.watered) return ask(`بذرة ${plantName(p)} ${SP(p.surah, 1)} بحاجة إلى سقي لتنمو. احصل على الماء من <b>البئر</b> في البستان الذي بين البستان الأول والثاني.`, toWell, (a) => a === 'well' && goWell(k));
   if (needsWater(p)) return ask(st.leaves < st.grown ? `${hurtWords(p)}، لأنها لم تُسقَ. اذهب واملأ الدلو من البئر حتى نسقيها فتخضرّ.`
     : `حان سقي ${name} اليوم، حتى تبقى مخضرّة. اذهب واملأ الدلو من البئر.`, toWell, (a) => a === 'well' && goWell(k));
   if ((p.thorns || 0) > 0) return ask(`نبت حول ${name} شوك، لأن سقيها تُرك أيامًا. ${settings.plough ? 'اقتلعه بمحراثك.' : `اقتلعه بمحراث تشتريه من المتجر بـ${POINTS(PLOUGH_PRICE)}.`}`,
     settings.plough ? [['plough', 'اقتلع الشوك', 'primary'], ['later', 'لاحقًا']] : [['shop', 'إلى المتجر', 'primary'], ['later', 'لاحقًا']], (a) => { if (a === 'plough') doPlough(k); if (a === 'shop') openShop(); });
   if (st.grown < settings.leaves || p.redo) return openWird(k);     // the new memorization: straight into the repetition
-  ask(`${name} مكتملة ومخضرّة${p.sealed ? '' : `، فسمّعها ${who('لشيخك', 'لأبيك')} ليختمها`}. هل تحب الاستزادة؟ يقرأ الشيخ السورة كاملة وتقرأ معه، فتنال ${POINTS(MORE_POINTS)}.`,
+  ask(`${name} مكتملة ومخضرّة${p.sealed ? '' : `، فسمّعها ${who('لشيخك', 'لأبيك')} ليختمها`}. هل تحب الاستزادة؟ يقرأ الشيخ ${isJ(k) ? 'صفحاتها الخمس' : 'السورة كاملة'} وتقرأ معه، فتنال ${POINTS(MORE_POINTS)}.`,
     [['more', 'نعم، أستزيد', 'primary'], ['later', 'لاحقًا']], (a) => a === 'more' && openListen({ why: 'more', k }));
 }
 // what the days without water did to a sealed plant
@@ -4050,7 +4146,7 @@ function hurtWords(p) {
   const st = stageOf(p), T = isTree(p), y = st.yellow, f = st.grown - st.shown, bits = [];
   if (y) bits.push(T ? `اصفرّ ${y === 1 ? 'غصن' : fronds(p, y)}` : `اصفرّت ${y === 1 ? 'سعفة' : fronds(p, y)}`);
   if (f) bits.push(T ? `سقط ${f === 1 ? 'غصن' : fronds(p, f)}` : `سقطت ${f === 1 ? 'سعفة' : fronds(p, f)}`);
-  return `${bits.join('، و')} من ${plantName(p)} سورة <b>${SURAHS[p.surah]}</b>`;
+  return `${bits.join('، و')} من ${plantName(p)} ${SP(p.surah, 1)}`;
 }
 // أبو حفص (17 Nov): «يجب أن لا يستطيع بذر شجرة حتى ينهي شجرته الأولى ويتمها»: while a planted tree (or palm) has not yet grown
 // all its branches, no other seed goes into the ground; ناصح says which one to finish, and takes him to it
@@ -4058,7 +4154,7 @@ function unfinished() { const k = Object.keys(plots).find((q) => plots[q] && (pl
 function finishFirst() {
   const k = unfinished(); if (k == null) return false;
   const p = plots[k];
-  ask(`أتمّ ${plantMine(p)}: ${plantName(p)} سورة <b>${SURAHS[p.surah]}</b>، حتى ${isTree(p) ? 'تكتمل أغصانها' : 'تكتمل سعفاتها'} الخمس، ثم تزرع بذرة جديدة.`,
+  ask(`أتمّ ${plantMine(p)}: ${plantName(p)} ${SP(p.surah, 1)}، حتى ${isTree(p) ? 'تكتمل أغصانها' : 'تكتمل سعفاتها'} الخمس، ثم تزرع بذرة جديدة.`,
     [['go', `خذني إليها`, 'primary'], ['later', 'لاحقًا']], (a) => { if (a === 'go') { scrollToSlot(k); setTimeout(() => openPlot(k), STILL ? 0 : 700); } });
   return true;
 }
@@ -4068,10 +4164,10 @@ function askEmpty(k) {
   const n = nextSurah(holes[k].g); if (n < 0) return tell('زرعتَ سور هذا البستان كلها.');
   if (finishFirst()) return;
   const own = SEED_IDS.filter((id) => (seeds()[id] || 0) > 0), have = settings.stars || 0;
-  if (own.length) return ask(`هذه حفرة سورة <b>${SURAHS[n]}</b>. أيّ بذرة تزرع فيها؟`, own.map((id) => ['seed:' + id, `${seedName(id)}${seeds()[id] > 1 ? ' ×' + AR(seeds()[id]) : ''}`, 'primary']).concat([['later', 'لاحقًا']]),
+  if (own.length) return ask(`هذه حفرة ${SP(n, 1)}. أيّ بذرة تزرع فيها؟`, own.map((id) => ['seed:' + id, `${seedName(id)}${seeds()[id] > 1 ? ' ×' + AR(seeds()[id]) : ''}`, 'primary']).concat([['later', 'لاحقًا']]),
     (a) => a.startsWith('seed:') && plantSeed(k, a.slice(5)));
-  if (have >= SEED_PRICE.palm) return ask(`اشترِ بذرة لتزرعها هنا لسورة <b>${SURAHS[n]}</b>. معك ${POINTS(have)}.`, [['shop', 'إلى المتجر', 'primary'], ['later', 'لاحقًا']], (a) => a === 'shop' && openShop());
-  ask(`اشترِ بذرة لتزرعها. وإذا لم يكن عندك ثمنها فاستمع إلى قراءة الشيخ لسورة <b>${SURAHS[n]}</b> لتحصل على ثمن البذرة. هل تريد الحصول عليها؟`,
+  if (have >= SEED_PRICE.palm) return ask(`اشترِ بذرة لتزرعها هنا ل${SP(n, 1)}. معك ${POINTS(have)}.`, [['shop', 'إلى المتجر', 'primary'], ['later', 'لاحقًا']], (a) => a === 'shop' && openShop());
+  ask(`اشترِ بذرة لتزرعها. وإذا لم يكن عندك ثمنها فاستمع إلى قراءة الشيخ ل${SP(n, 1)} لتحصل على ثمن البذرة. هل تريد الحصول عليها؟`,
     [['listen', 'نعم', 'primary'], ['later', 'لاحقًا']], (a) => a === 'listen' && openListen({ why: 'earn', k, si: n }));
 }
 // a seed in a hole: it lies there until ناصح brings it water from the well
@@ -4080,7 +4176,7 @@ function plantSeed(k, id) {
   if (finishFirst()) return;
   S[id]--; plots[k] = { surah: n, watered: false, grown: 0 }; if (id !== 'palm') plots[k].kind = id;
   save(); scrollToSlot(k); render(k); count(); invBadge();
-  setTimeout(() => ask(`زرعتَ بذرة ${id === 'palm' ? 'النخلة' : SEED_LABEL[id]} لسورة <b>${SURAHS[n]}</b>. البذرة بحاجة إلى سقي لتنمو الشجرة: احصل على الماء من <b>البئر</b> في البستان الذي بين البستان الأول والثاني.`,
+  setTimeout(() => ask(`زرعتَ بذرة ${id === 'palm' ? 'النخلة' : SEED_LABEL[id]} ل${SP(n, 1)}. البذرة بحاجة إلى سقي لتنمو الشجرة: احصل على الماء من <b>البئر</b> في البستان الذي بين البستان الأول والثاني.`,
     [['well', 'خذني إلى البئر', 'primary'], ['later', 'لاحقًا']], (a) => a === 'well' && goWell(k)), STILL ? 0 : 800);
 }
 // the seed bought: the empty holes of his garden glow, and he taps the one he likes (أبو حفص: «يأخذ البذرة ويضعها في الموضع الذي
@@ -4101,13 +4197,15 @@ function startSeedPlacing(id) {
 // bucket, or to read more of a tree already complete («هل تحب الاستزادة؟»). It counts only when heard to its end
 const LISTEN_POINTS = 10, MORE_POINTS = 5;
 function openListen(o) {
-  const si = o.si != null ? o.si : plots[o.k].surah, sno = SURA_NO(si);
-  if (!MUSHAF.suras[sno] || !MUSHAF.audio[sno]) return toast('لا مصحف ولا تلاوة لهذه السورة في النموذج بعد');
-  toast('يجهّز ناصح صفحة المصحف…');
-  loadSura(sno).then((D) => {
+  const si = o.si != null ? o.si : plots[o.k].surah, sno = isJ(si) ? null : SURA_NO(si);
+  if (isJ(si) ? !jReady(jOf(si)) : !MUSHAF.suras[sno] || !MUSHAF.audio[sno]) return toast(isJ(si) ? 'لم تصل صفحات هذا الجزء إلى البرنامج بعد' : 'لا مصحف ولا تلاوة لهذه السورة في النموذج بعد');
+  toast(isJ(si) ? 'يجهّز ناصح صفحات المصحف الخمس…' : 'يجهّز ناصح صفحة المصحف…');
+  loadUnit(si).then((D) => {
     Object.assign(wird, { slot: o.k, listen: o, reps: 0, completed: false, data: { [o.k]: D }, seg: treeItems(si, D), testRes: null, prize: null });
     wird.steps = [{ kind: 'hear', slot: o.k, why: o.why, si }];
-    $('toast').classList.remove('show'); audioUrl(D.items[0].src).catch(() => {});
+    $('toast').classList.remove('show');
+    // (the five pages' recitations come one after another, the first at once)
+    [...new Set(D.items.map((it) => it.src))].reduce((q, src) => q.then(() => audioUrl(src)).catch(() => {}), Promise.resolve());
     wEl.hidden = false; wEl.scrollTop = 0; hideHint(); setStep(0); keepAwake(true);
   }).catch((e) => toast('تعذّر تحميل صفحة المصحف: ' + whyFailed(e), 7000));
 }
@@ -4116,7 +4214,7 @@ function finishListen() {
   if (!o) return;
   if (!done) return tell(o.why === 'well' ? 'لم تكتمل القراءة، فلم يمتلئ الدلو. اضغط البئر مرة أخرى حين تريد.' : 'لم تكتمل القراءة، فلم تُحسب. أتمّها في المرة القادمة.');
   if (o.why === 'earn') { $('openShop').classList.add('pulse'); return tell(`أحسنت! معك الآن ${POINTS(settings.stars || 0)}، ثمن بذرة النخلة. اضغط زر <b>المتجر</b> في الأعلى واشترِ بذرتك.`); }
-  if (o.why === 'more') return tell(`ما شاء الله! زدتَ قراءة سورة <b>${SURAHS[plots[o.k].surah]}</b>، فنلت ${POINTS(MORE_POINTS)}.`);
+  if (o.why === 'more') return tell(`ما شاء الله! زدتَ قراءة ${SP(plots[o.k].surah, 1)}، فنلت ${POINTS(MORE_POINTS)}.`);
   if (o.why === 'well') bucketRun(o.k);
 }
 // the plant's sheet with the test tools: only with «وضع التجربة» on in the test numbers (the child never sees it)
@@ -4127,7 +4225,7 @@ function drawPlot() {
   const extra = [st.yellow ? `${AR(st.yellow)} صفراء` : '', st.grown - st.shown ? `${AR(st.grown - st.shown)} ساقطة` : '', p.neglect ? `أيام بلا سقي: ${AR(p.neglect)}` : '',
     p.water === 'full' ? 'الدلو ممتلئ' : waterState(k) === 'empty' ? 'تنتظر الدلو' : '', p.redo ? 'يُعاد' : ''].filter(Boolean).join('، ');
   const steps = [`<i class="trunk-step ${st.kind === 'palm' ? 'done' : ''}"></i>`].concat(Array.from({ length: L }, (_, i) => `<i class="${i < st.leaves ? 'done' : i < st.shown ? 'wilted' : ''}"></i>`)).join('');
-  openSheet(`<h2 id="sheetTitle">${plantName(p)} سورة ${SURAHS[p.surah]}</h2>
+  openSheet(`<h2 id="sheetTitle">${plantName(p)} ${SP(p.surah)}</h2>
     <div class="sub">${status}${extra ? ' — ' + extra : ''}</div>
     <div class="stages" style="--n:${L + 1}">${steps}</div>
     <div class="stage-names"><span>الجذع</span><span>${T ? 'الأغصان' : 'السعف'}</span></div>
@@ -4175,7 +4273,7 @@ function openSettings() {
     <div class="mic-probe"><span class="w-mic" id="micProbe" hidden aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M6 11a6 6 0 0 0 12 0M12 17v4M9 21h6" fill="none" stroke-width="1.8" stroke-linecap="round"/></svg><i></i><i></i><i></i><i></i></span><span id="micProbeText"></span></div>
     <div class="row" style="margin-top:10px"><button class="btn light" data-act="messenger">ناصح يحمل رسالة من زميل</button></div>
     <div class="row" style="margin-top:10px"><button class="btn light" data-act="huntoffer">ناصح يخبّئ مفاجأة (تجربة)</button></div>
-    <div class="row" style="margin-top:10px"><button class="btn light" data-act="opennext" ${(settings.opened || 1) >= NG ? 'disabled style="opacity:.45"' : ''}>افتح البستان التالي (تجربة)</button></div>
+    <div class="row" style="margin-top:10px"><button class="btn light" data-act="opennext" ${(settings.opened || 1) >= NA ? 'disabled style="opacity:.45"' : ''}>افتح البستان التالي (تجربة)</button></div>
     <div class="row" style="margin-top:10px"><button class="btn light" data-act="newgarden">غيّر سماء البساتين</button></div>
     <div class="row" style="margin-top:10px"><button class="btn light" data-act="update">تنزيل التحديثات <small class="a-ver">(الإصدار ${APP_VERSION})</small>${updateWaiting ? ' <span class="a-dot"></span>' : ''}</button></div>`);
 }
@@ -4191,7 +4289,7 @@ function cleanGName(v) {
 function openNameSheet(g) {
   if (VIEW_ONLY || placing || hunt.on || g == null || !gardenOpen(g) || aside(stopInfo(page()))) return;
   current = null; hideHint();
-  openSheet(`<h2 id="sheetTitle">سمِّ البستان ${ORDF[g]}</h2><div class="sub">اختر له اسمًا من ابتكارك، كلمة أو كلمتين</div>
+  openSheet(`<h2 id="sheetTitle">سمِّ ${BST(g)}</h2><div class="sub">اختر له اسمًا من ابتكارك، كلمة أو كلمتين</div>
     <div class="t-field" style="margin-top:10px"><input type="text" id="gnameIn" maxlength="18" value="${escT(gname(g))}" placeholder="مثل: روضة النور" aria-label="اسم البستان" autocomplete="off"></div>
     <div class="sub" id="gnameErr" style="color:#b0362f;min-height:1.4em"></div>
     <div class="row" style="margin-top:8px"><button class="btn primary" data-act="gname" data-g="${g}">احفظ الاسم</button><button class="btn light" data-act="close">إلغاء</button></div>`);
@@ -4261,7 +4359,7 @@ body.addEventListener('click', (e) => {
   if (act === 'newgarden') { closeSheet(); openChooser(false); return; }
   if (act === 'reset') { plots = JSON.parse(JSON.stringify(SAMPLE)); settings = { ...DEFAULTS }; decor = null; inv = SAMPLE_INV.slice(); log = []; chainSync(); save(); buildWorld(); renderAll(false); invBadge(); closeSheet(); scrollToPage(stopOf(0)); return; }
   if (act === 'opennext') {
-    closeSheet(); if ((settings.opened || 1) >= NG) return;
+    closeSheet(); if ((settings.opened || 1) >= NA) return;
     settings.opened = (settings.opened || 1) + 1; save();
     setTimeout(() => openGarden(settings.opened - 1), 350);
     return;
@@ -4526,6 +4624,8 @@ const app = $('app'), scroller = $('scroller'), dots = [...$('dots').children];
 let STEP = 1, SW = 1, SH = 1, KPX = 1;     // one garden's width and height on the screen, and screen pixels to a point of the drawing
 // ناصح is drawn for a phone's garden; on a tablet held upright the garden is drawn bigger, and he grows with it (BS)
 let BS = 1;
+// (the page's width before size() — --ww in the style: 39 gardens and the small ones — holds all the stops, so the scroll stays at
+// the first until size() sets their places: else it lands on a far one and the sign shows before the door opens)
 for (let i = 0; i < NSTOP; i++) { const s = document.createElement('div'); s.className = 'snap'; s.style.left = `calc(var(--step) * ${i})`; $('pano').prepend(s); }
 function size() {
   const w = app.clientWidth, h = app.clientHeight, full = 4 * w / 1.84616;
@@ -4569,7 +4669,7 @@ if (window.ResizeObserver) new ResizeObserver(() => requestAnimationFrame(onResi
 const fsBtn = $('goFull'), FS_IN = 'M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5', FS_OUT = 'M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5';
 const fsNow = () => document.fullscreenElement || document.webkitFullscreenElement || null;
 const INSTALLED = (window.matchMedia && matchMedia('(display-mode: fullscreen), (display-mode: standalone)').matches) || navigator.standalone === true;
-fsBtn.hidden = INSTALLED || !(document.fullscreenEnabled || document.webkitFullscreenEnabled);
+fsBtn.hidden = !(document.fullscreenEnabled || document.webkitFullscreenEnabled);
 // أبو حفص (22 Nov): «لماذا لا يمكن تثبيت البرنامج إلى الجوال؟»: where the browser offers it, ناصح offers to put the garden on the
 // phone's screen like an app (once a day, three times at most); opened from there it fills the screen by itself
 let installAsk = null;
@@ -4600,10 +4700,10 @@ fsBtn.addEventListener('click', async () => {
 // أبو حفص (22 Nov, evening): «بعد تثبيت البرنامج في وضع ملء الشاشة صار يظهر خطًا أبيض مع أنه في السابق كان يغطي الشاشة كلها»:
 // opened from its icon, the phone kept the strip of its clock (where the camera sits) for itself. The first touch asks for the
 // whole screen, as the button did in the browser (and again after the child leaves it, the next touch)
+// (his phone said it filled the screen when it did not: the first touch asks always, and the button stays, as in the browser)
 function coverAll() {
-  if (!INSTALLED || fsNow()) return;
-  const long = Math.max(window.innerWidth, window.innerHeight), screenLong = Math.max(screen.width, screen.height);
-  if (screenLong - long < 6) return;                     // it fills the screen already
+  if (!INSTALLED || fsNow() || coverAll.asked) return;
+  coverAll.asked = true; setTimeout(() => { coverAll.asked = false; }, 4000);
   const root = document.documentElement, ask = root.requestFullscreen || root.webkitRequestFullscreen; if (!ask) return;
   try { const pr = ask.call(root, { navigationUI: 'hide' }); if (pr && pr.catch) pr.catch(() => {}); } catch (e) {}
 }
@@ -4682,6 +4782,14 @@ BIRD.parts.forEach((q) => {
   im.setAttribute('href', q.href);
 });
 
+// his sad face for a wrong answer (shown only while he shakes his head): the upper lid lowered over his eye, its edge, and a brow
+// higher at the beak's side (in the head's own drawing: the eye is about 28–51 across and 37–58 down)
+if (headGroup) {
+  const sad = el('g', { class: 'sad st', 'aria-hidden': 'true' }, headGroup);
+  el('path', { d: 'M25.5 33.5L53.5 33.5L53.5 47.8Q40 44.2 25.5 43.4Z', fill: '#afe9fe' }, sad);
+  el('path', { d: 'M26.5 43.5Q40 44.4 52.5 47.6', fill: 'none', stroke: '#1f5f8b', 'stroke-width': 1.6, 'stroke-linecap': 'round' }, sad);
+  el('path', { d: 'M28.5 31.2Q38 30.6 48.5 35.6', fill: 'none', stroke: '#1f5f8b', 'stroke-width': 2.2, 'stroke-linecap': 'round' }, sad);
+}
 const bird = { x: 0, y: 0, dir: -1, perched: false, busy: false, tilt: 0 };    // dir -1: faces left, as drawn
 function perchAt() { return { x: app.clientWidth - 10 - (BIRD.w - BIRD.feet[0]) * bk * BS, y: app.clientHeight - 30 }; }
 // his lean (bird.tilt, degrees on the screen) turns him about his feet: in flight, and as he pours a bucket
@@ -4829,7 +4937,7 @@ function tapBird() {
   if (pendingLetter) return openLetter(pendingLetter);
   if (typeof smallTalk === 'function' && smallTalk()) return;
   const tk = Object.keys(plots).find((q) => (plots[q].thorns || 0) > 0);
-  if (tk != null && !thornTold) { thornTold = true; const q = plots[tk]; return say(`حول ${plantName(q)} سورة <b>${SURAHS[q.surah]}</b> شوك! راجع سورتها حتى ${isTree(q) ? 'تخضرّ أغصانها' : 'يخضرّ سعفها'}، ثم اقتلعه بالمحراث.`); }
+  if (tk != null && !thornTold) { thornTold = true; const q = plots[tk]; return say(`حول ${plantName(q)} ${SP(q.surah, 1)} شوك! راجع سورتها حتى ${isTree(q) ? 'تخضرّ أغصانها' : 'يخضرّ سعفها'}، ثم اقتلعه بالمحراث.`); }
   say(TIPS[tip++ % TIPS.length]);
 }
 // أبو حفص (13 Nov): the child never sees the plant's sheet: ناصح tells him what comes next, and he answers with a button in the box
@@ -4857,7 +4965,7 @@ const greeting = () => GREETING() + (dailyGift ? ` <span class="prize"><span cla
 // a tree that died while he was away (its trunk fell: أبو حفص, 13 Nov)
 function deathNews() {
   const d = settings.dead || []; if (!d.length) return; settings.dead = []; save();
-  const names = d.map((x) => `${x.kind && TREE_SHORT[x.kind] ? 'شجرة ' + TREE_SHORT[x.kind] : 'نخلة'} سورة <b>${SURAHS[x.surah]}</b>`).join('، و');
+  const names = d.map((x) => `${x.kind && TREE_SHORT[x.kind] ? 'شجرة ' + TREE_SHORT[x.kind] : 'نخلة'} ${SP(x.surah, 1)}`).join('، و');
   tell(`ماتت ${names}، لأنها تُركت بلا سقي أيامًا حتى سقطت أغصانها ثم جذعها. اشترِ بذرة جديدة وازرعها، وكرّر سورتها من جديد.`);
 }
 function startBird() {
@@ -4880,7 +4988,7 @@ function drawBoard(svg, si, gi) {
     el('circle', { r: 48, fill: 'url(#sunglow)', opacity: .5 }, sun); useOf('sun-rays', sun); useOf('sun-face', sun);
     S.clouds.forEach((c) => el('image', { x: c.x, y: c.y, width: c.w, height: c.h }, svg).setAttribute('href', c.href));
   } else el('rect', { width: ART.W, height: ART.H, fill: '#d6eef6' }, svg);
-  if (gi != null) { const G = ART.grasses[gi]; el('image', { x: -G.pad, y: 0, width: ART.W + G.pad, height: ART.H, preserveAspectRatio: 'none' }, svg).setAttribute('href', G.img); }
+  if (gi != null) { const G = GR(gi); el('image', { x: -G.pad, y: 0, width: ART.W + G.pad, height: ART.H, preserveAspectRatio: 'none' }, svg).setAttribute('href', G.img); }
 }
 function chooserOptions(row, list, kind) {
   list.forEach((_, i) => {
@@ -4957,6 +5065,44 @@ function loadSura(sno) {
     return { sno, items, pages: Object.fromEntries(pages.map((P) => [P.page, P])) };
   });
 }
+// أبو حفص (22 Nov): «الأصوات كلها من مجمع الملك فهد، ولكل جزء أختار صوتا مختلفا». Each juz's files (make_juz.py) are in a
+// repository of their own beside this site's (a site holds a gigabyte at most): bustan-ajza-1 (the juz 1–10), -2 (11–20), -3
+// (21–29), each juz in its folder: juz.json (the reciter, and each page's recitation and where each ayah begins in it), pN.json
+// (a page, as mushaf/pN.json) and aN.mp3 (the page recited). Fetched when the child reviews a palm, five pages at a time
+const JZ_ROOT = String(window.BUSTAN_DATA || '../');
+const juzRepo = (j) => `bustan-ajza-${j <= 10 ? 1 : j <= 20 ? 2 : 3}`;
+const juzBase = (j) => `${JZ_ROOT}${juzRepo(j)}/j${j}/`;
+const juzIdx = {};
+function loadJuzIndex(j) {
+  return juzIdx[j] || (juzIdx[j] = fetchRetry(juzBase(j) + 'juz.json').then((r) => r.json()).catch((e) => { delete juzIdx[j]; throw e; }));
+}
+function loadJuzPage(j, N) {
+  const key = `j${j}:${N}`;
+  if (!pageCache[key]) pageCache[key] = fetchRetry(`${juzBase(j)}p${N}.json`).then((r) => r.json()).catch((e) => { delete pageCache[key]; throw e; });
+  return pageCache[key];
+}
+// a palm's ayat in order over its five pages (the surahs' titles and basmalas among them), each with its page's recitation
+function loadJuzPalm(si) {
+  const j = jOf(si), p0 = jPalm(si).p0, Ns = [0, 1, 2, 3, 4].map((i) => p0 + i);
+  return loadJuzIndex(j).then((I) => Promise.all(Ns.map((N) => loadJuzPage(j, N))).then((pages) => {
+    const items = [];
+    pages.forEach((P) => {
+      const A = I.pages[P.page] || { ayat: {} }, src = juzBase(j) + A.audio;
+      Object.keys(P.items).map(Number).sort((a, b) => a - b).forEach((s) => P.items[s].forEach((it) => {
+        const a = A.ayat[`${s}:${it.aya}`] || [0, 0]; items.push({ ...it, s, page: P.page, src, t0: a[0], dur: a[1], jz: j });
+      }));
+    });
+    return { sno: null, juz: j, reciter: I.reciter || '', items, pages: Object.fromEntries(pages.map((P) => [P.page, P])) };
+  }));
+}
+const loadUnit = (si) => (isJ(si) ? loadJuzPalm(si) : loadSura(SURA_NO(si)));
+// the whole page, for a juz palm (the sheikh reads all of it)
+function pageBox(P) {
+  let x0 = Math.min(...P.lines.map((l) => l[2])) - 6, x1 = Math.max(...P.lines.map((l) => l[3])) + 6, y0 = Math.min(...P.lines.map((l) => l[0])) - 8, y1 = Math.max(...P.lines.map((l) => l[1])) + 8;
+  P.bands.forEach((b) => { x0 = Math.min(x0, b[0] - 3); x1 = Math.max(x1, b[2] + 3); y0 = Math.min(y0, b[1] - 4); y1 = Math.max(y1, b[3] + 4); });
+  if (x1 - x0 < 256) { const c = (x0 + x1) / 2; x0 = c - 128; x1 = c + 128; }
+  return [x0, y0, x1 - x0, y1 - y0].map((v) => +v.toFixed(1));
+}
 let shownPage = null;
 function showPage(P) { if (shownPage !== P.page) { $('mPageArt').innerHTML = P.art; shownPage = P.page; } }
 // the part of the page the card shows: the lines of the ayat (and a little of the line before and after), with the surah's
@@ -5000,6 +5146,7 @@ function cropOf(P, list, sno, part, whole) {
 function viewItems(list, part) {
   const st = wird.steps[wird.step], D = wird.data[st.slot]; if (!D || !list.length) return;
   const P = D.pages[list[0].page]; showPage(P);
+  if (D.juz) { const r = $('mSuraRect'); r.setAttribute('y', 0); r.setAttribute('height', P.H); r.setAttribute('width', P.W + 20); r.setAttribute('x', -10); mPage.setAttribute('viewBox', pageBox(P).join(' ')); return; }
   if (P.page <= 2) part = true;
   const whole = st.kind === 'echo';
   const all = part ? D.items.filter((it) => it.page === P.page) : list;
@@ -5085,10 +5232,10 @@ const wird = { slot: null, data: {}, steps: [], step: 0, items: [], cues: [], c:
 const wAudio = new Audio(); wAudio.preload = 'auto';
 const mPage = $('mPage'), mBg = $('mHlBg'), mClip = $('mHlClip'), wEl = $('wird');
 const range = (a, b) => (a === b ? `الآية ${AR(a)}` : b - a === 1 ? `الآيتان ${AR(a)} و${AR(b)} معًا` : `الآيات ${AR(a)}–${AR(b)} معًا`);
-function canWird(k) { const p = plots[k]; return !!p && !!MUSHAF.suras[SURA_NO(p.surah)] && !!MUSHAF.audio[SURA_NO(p.surah)]; }
+function canWird(k) { const p = plots[k]; if (!p) return false; if (isJ(p.surah)) return jReady(jOf(p.surah)); return !!MUSHAF.suras[SURA_NO(p.surah)] && !!MUSHAF.audio[SURA_NO(p.surah)]; }
 // the teacher sets the portion; in the prototype: a surah of 4 ayat or fewer whole; otherwise the next ayat after what the
 // child memorized last (up to 4, about 40 seconds of recitation, on one page), and after its last ayah from its first again
-const treeItems = (si, D) => { const [a0, a1] = treeRange(si); return D.items.filter((it) => it.aya >= a0 && it.aya <= a1); };
+const treeItems = (si, D) => { if (D.juz) return D.items.slice(); const [a0, a1] = treeRange(si); return D.items.filter((it) => it.aya >= a0 && it.aya <= a1); };
 // أبو حفص (13 Nov): «سنعتمد المقدار المراد تكراره (التلقائي) هو سورة كاملة» — and, as he chose when it came out too long for the
 // longer surahs, «مقاطع قصيرة»: a surah whose repetition (his way, cuesFor) takes a quarter of an hour or less is repeated whole;
 // a longer one in portions of the teacher's number of ayat at most (5), each on one page and none longer than that quarter of an
@@ -5258,8 +5405,8 @@ function cuesFor(kind, items) {
       for (let r = 1; r <= CHAIN_JOIN; r++) cues.push({ turn: all, count: true, unit: range(all[0].aya, it.aya), r, of: CHAIN_JOIN });
     }
   });
-  else if (kind === 'listen') { const bas = items.find((it) => it.aya === 0); cues.push({ hear: bas && wird.seg[0].aya === 1 ? [bas, ...wird.seg] : wird.seg.slice() }); }
-  else if (kind === 'hear') { const bas = items.find((it) => it.aya === 0); cues.push({ hear: bas && wird.seg[0].aya === 1 ? [bas, ...wird.seg] : wird.seg.slice(), along: wird.steps[wird.step].why === 'more', count: true }); }
+  else if (kind === 'listen') { const bas = items[0] && items[0].jz ? null : items.find((it) => it.aya === 0); cues.push({ hear: bas && wird.seg[0].aya === 1 ? [bas, ...wird.seg] : wird.seg.slice() }); }
+  else if (kind === 'hear') { const bas = items[0] && items[0].jz ? null : items.find((it) => it.aya === 0); cues.push({ hear: bas && wird.seg[0].aya === 1 ? [bas, ...wird.seg] : wird.seg.slice(), along: wird.steps[wird.step].why === 'more', count: true }); }
   else {
     // أبو حفص (13 Nov): «يقرأ الآية الأولى يكررها 3 مرات ثم ينتقل إلى الآية الثانية يكررها 3 مرات، ثم يربط الأولى بالثانية فيكررها 3
     // مرات وهكذا حتى آخر السورة ... ثم يبدأ تكرارا جديدا لكل السورة وذلك باستثناء الآية الأولى حتى آخر السورة، ثم يعود فيستثني الآية
@@ -5287,13 +5434,15 @@ function setStep(n) {
   $('wWork').hidden = st.kind === 'done'; $('wDone').hidden = st.kind !== 'done'; wEl.classList.toggle('at-done', st.kind === 'done');
   if (st.kind === 'done') return showGift();
   if (st.kind === 'hear') {        // the sheikh reads the whole surah: to earn a seed's price, at the well, or for more
-    const D = wird.data[st.slot], name = SURAHS[st.si];
+    const D = wird.data[st.slot], name = SP(st.si);
     wird.items = D.items; wird.cues = cuesFor('hear', D.items); wird.c = 0; wird.j = 0; wird.phase = 'idle'; wird.paused = false; wird.total = 1;
+    wEl.classList.toggle('whole', !!D.juz);
     viewItems([wird.seg[0]], true); mark(null); $('wBar').style.width = '0';
-    $('wTitle').textContent = st.why === 'well' ? `ماء البئر: سورة ${name}` : st.why === 'more' ? `استزادة: سورة ${name}` : `استمع إلى سورة ${name}`;
-    say2(st.why === 'well' ? `استمع إلى الشيخ يقرأ سورة ${name} حتى آخرها، فإذا أتمّها ملأتُ لك الدلو من البئر.`
-      : st.why === 'more' ? `اقرأ مع الشيخ سورة ${name} كاملة بصوت مسموع، فإذا أتممتها نلت ${POINTS(MORE_POINTS)}.`
-      : `استمع إلى الشيخ يقرأ سورة ${name} حتى آخرها، فتنال ${POINTS(LISTEN_POINTS)}، ثمن بذرة النخلة.`);
+    $('wTitle').textContent = st.why === 'well' ? `ماء البئر: ${name}` : st.why === 'more' ? `استزادة: ${name}` : `استمع إلى ${name}`;
+    const all = D.juz && D.reciter ? `${name} بصوت ${D.reciter}` : name;
+    say2(st.why === 'well' ? `استمع إلى الشيخ يقرأ ${all} حتى آخرها، فإذا أتمّها ملأتُ لك الدلو من البئر.`
+      : st.why === 'more' ? `اقرأ مع الشيخ ${all} كاملة بصوت مسموع، فإذا أتممتها نلت ${POINTS(MORE_POINTS)}.`
+      : `استمع إلى الشيخ يقرأ ${name} حتى آخرها، فتنال ${POINTS(LISTEN_POINTS)}، ثمن بذرة النخلة.`);
     ui(); return;
   }
   const p = plots[st.slot], D = wird.data[st.slot], name = SURAHS[p.surah];
@@ -5454,7 +5603,7 @@ function ui() {
   showTip(st, q);
   $('wCount').innerHTML = st.kind === 'repeat'
     ? `<span>القراءة ${AR(Math.min(wird.reps + (running ? 1 : 0), wird.total))} من ${AR(wird.total)}${wird.parts > 1 ? ` — المقطع ${AR(wird.partN + 1)} من ${AR(wird.parts)}` : ''}</span>`
-    : st.kind === 'hear' ? '<span>استمع حتى آخر السورة</span>'
+    : st.kind === 'hear' ? `<span>استمع حتى آخر ${isJ(st.si) ? 'الصفحات' : 'السورة'}</span>`
     : st.kind === 'echo' ? (MIC_NOTE[mic.state] ? `<span>الصدى تدريب لا يُحسب: ${MIC_NOTE[mic.state]}</span>` : `<span>الصدى: سمعتُ ${AR(wird.echoOk || 0)} من ${AR(wird.total)}</span>`)
     : st.kind === 'water' ? `<span>مرة واحدة تكفي لسقي ${isTree(plots[st.slot]) ? 'الشجرة' : 'النخلة'}</span>` : '<span>استماع فقط، ثم نحفظ</span>';
   side.hidden = !(wird.phase === 'turn' && !wird.paused); side.textContent = 'ردّدتُها';
@@ -5638,7 +5787,7 @@ const today = () => todayKey();
 const screenOf = (x) => 3 - Math.min(3, Math.max(0, Math.floor(x / (ART.W / 4))));
 // the review: planted surahs with the sheikh's recitation, the ones with yellow fronds first, then the least recently heard; two at most
 function reviewList() {
-  const ks = Object.keys(plots).map(Number).filter((k) => canWird(k));
+  const ks = Object.keys(plots).map(Number).filter((k) => !isJ(k) && canWird(k));
   ks.sort((a, b) => {
     const ya = (plots[a].peak || 0) > stageOf(plots[a]).leaves, yb = (plots[b].peak || 0) > stageOf(plots[b]).leaves;
     return (yb - ya) || ((plots[a].heard || 0) - (plots[b].heard || 0));
@@ -5748,7 +5897,7 @@ function wiggle(c) {
   if (c.kind === 'palm') c.el.animate([{ transform: 'rotate(0deg)' }, { transform: 'rotate(3.5deg)' }, { transform: 'rotate(-3deg)' }, { transform: 'rotate(1.5deg)' }, { transform: 'rotate(0deg)' }], { duration: 700, easing: 'ease-in-out' });
   else { const pop = c.el.querySelector('.deco-pop') || c.el; pop.animate([{ transform: 'translateY(0)' }, { transform: 'translateY(-14px) rotate(-6deg)' }, { transform: 'translateY(0) rotate(4deg)' }, { transform: 'translateY(0)' }], { duration: 520, easing: 'ease-out' }); }
 }
-const elsewhere = () => say(`المفاجأة مخبأة في <b>البستان ${ORDF[hunt.g]}</b>، فارجع إليه وابحث فيه.`, { wave: false });
+const elsewhere = () => say(`المفاجأة مخبأة في <b>${BST(hunt.g)}</b>، فارجع إليه وابحث فيه.`, { wave: false });
 function huntTapPalm(k) {
   if (holes[k].g !== hunt.g) return elsewhere();
   const c = hunt.cands.find((c) => c.kind === 'palm' && c.k === k); if (c) huntTap(c); else say('لا شيء عند هذه البذرة. ابحث عند النخيل والزينة.', { wave: false });
@@ -5803,7 +5952,7 @@ function twinkle() {
   el('circle', { class: 'hunt-spark', r: 20, fill: '#fff6a8', opacity: .5 }, hunt.spark);
   el('path', { class: 'hunt-spark', d: 'M0 -24L5 -5L24 0L5 5L0 24L-5 5L-24 0L-5 -5Z', fill: '#fff6a8', stroke: '#e0a020', 'stroke-width': 1.8 }, hunt.spark);
   const n = screenOf(s.x);
-  if (curG() !== hunt.g) setTimeout(() => say(`لمعت المفاجأة في الشاشة ${ORD[n]} من البستان ${ORDF[hunt.g]}، اسحب إليها.`, { wave: false }), 300);
+  if (curG() !== hunt.g) setTimeout(() => say(`لمعت المفاجأة في الشاشة ${ORD[n]} من ${BST(hunt.g)}، اسحب إليها.`, { wave: false }), 300);
   else if (n !== stopInfo(page()).scr) setTimeout(() => say(`لمعت المفاجأة في الشاشة ${ORD[n]}، اسحب إليها.`, { wave: false }), 300);
   else setTimeout(() => say('انظر إلى اللمعة!', { wave: false }), 300);
 }
@@ -5915,7 +6064,7 @@ function queueSync(ms = 3000) { if (!isStudent() || VIEW_ONLY || !sheetSeen || a
 function summaryOf() {
   const F = childFacts();
   return { g: settings.opened || 1, full: F.full, sealed: F.sealed, wait: F.wait.length, yellow: F.yellow, thorns: F.thorns, str: F.str, last: F.last,
-    stars: settings.stars || 0, trees: Object.keys(plots).length, names: settings.gnames || {} };
+    stars: settings.stars || 0, trees: Object.keys(plots).length, names: settings.gnames || {}, ajza: Object.keys(settings.ajza || {}).length };
 }
 // the time of the sheet's copy, kept beside this device's copy without changing it
 function keepSynced() { try { const s = JSON.parse(localStorage.getItem(STORE_KEY) || 'null'); if (s) { s.syncedAt = syncedAt; localStorage.setItem(STORE_KEY, JSON.stringify(s)); } } catch (e) {} }
@@ -6032,7 +6181,7 @@ function applyOrder(o) {
   if (o.t === 'gift') { if (!pieceDef(o.name)) return false; inv.push(o.name); news().push({ kind: 'gift', name: o.name }); addLog({ kind: 'gift', name: o.name }); return true; }
   // a child who already knows (أبو حفص): the palms of his surahs, from the Fatiha to the last he was tested in, complete and sealed
   if (o.t === 'hafiz') {
-    const upto = Math.min(SURAHS.length - 1, Math.floor(+o.upto)); if (!(upto >= 0)) return false;
+    const upto = Math.min(TREES.length - 1, Math.floor(+o.upto)); if (!(upto >= 0)) return false;
     const grade = o.grade === 'جيد' ? 'جيد' : 'متقن', tk = todayKey();
     for (let si = 0; si <= upto; si++) {
       let k = Object.keys(plots).find((q) => plots[q] && plots[q].surah === si);
@@ -6041,6 +6190,15 @@ function applyOrder(o) {
       ['again', 'redo', 'counted', 'water', 'thorns', 'parts', 'part'].forEach((x) => delete p[x]);
     }
     news().push({ kind: 'hafiz', upto, grade }); addLog({ kind: 'hafiz', upto, grade }); save(); return true;
+  }
+  // a juz his sheikh tested him in (أبو حفص, 22 Nov): its garden opens, and its four palms come whole and sealed — sealed again,
+  // they come back whole (a palm that died, or yellowed); the cycle of review is laid out again with them
+  if (o.t === 'juz') {
+    const j = Math.floor(+o.juz); if (!(j >= 1 && j <= NJ)) return false;
+    const grade = o.grade === 'جيد' ? 'جيد' : 'متقن', tk = todayKey();
+    inGarden(gOfJuz(j)).forEach((k) => { plots[k] = { surah: k, watered: true, grown: settings.leaves, sealed: true, grade, lastWater: tk, neglect: 0, juz: j }; });
+    settings.ajza = { ...(settings.ajza || {}), [j]: { grade, day: tk } }; delete settings.jcyc;
+    news().push({ kind: 'juz', juz: j, grade }); addLog({ kind: 'juz', juz: j, grade }); save(); return true;
   }
   if (o.t === 'chest') { settings.chests = { ...(settings.chests || {}), [o.g]: { from: o.from, what: o.what, secret: !!o.secret } }; save(); return true; }
   return false;
@@ -6088,7 +6246,7 @@ async function visitFriend(f) {
     if (visitFriend.changed) { visitFriend.changed = false; save(); invBadge(); }
     if (savedAt > syncedAt) queueSync(); setTimeout(() => { say(`رجعتَ إلى بستانك يا <b>${escA(GREET_NAME)}</b>.`); if (mail().length) mailSoon(4000); setTimeout(pollOrders, 1500); }, 400); }, true);
   if (giftHint) { giftHint = false; setTimeout(() => toast('اضغط «أهدِه» في الأعلى لتختار هديتك'), 600); }
-  if (visitHide && !visitHide.found) setTimeout(() => toast(`خبّأ ${f.name} قطعة تحت حجر أو عشب في بستانه ${ORDF[visitHide.g] || ""}! ارفعها واحدًا واحدًا حتى تجدها`, 5000), giftHint ? 3400 : 700);
+  if (visitHide && !visitHide.found) setTimeout(() => toast(`خبّأ ${f.name} قطعة تحت حجر أو عشب في ${isJG(visitHide.g) ? BST(visitHide.g) : 'بستانه ' + (ORDF[visitHide.g] || '')}! ارفعها واحدًا واحدًا حتى تجدها`, 5000), giftHint ? 3400 : 700);
 }
 $('visitGift').addEventListener('click', () => visitGift());
 $('visitMsg').addEventListener('click', () => {
@@ -6108,7 +6266,7 @@ async function openFriends() {
   openSheet(`<h2 id="sheetTitle">بساتين زملائي</h2><div class="sub">زُر بستان زميلك، واترك له رسالة تشجيع</div>
     ${r.classmates.length ? r.classmates.map((f, i) => { const s = f.summary || {};
       return `<div class="a-row"><span class="t-ava" aria-hidden="true">${escA(f.name[0])}</span><span class="t-who"><b>${escA(f.name)}</b>
-        <span class="t-line">${s.g ? `البستان ${ORDF[(s.g || 1) - 1]} — كاملة ${AR(s.full || 0)}، مثمرة ${AR(s.sealed || 0)}` : 'لم يفتح بستانه بعد'}</span>${f.hide ? `<div class="t-chips"><span class="t-chip seal">${f.hide.found ? 'وجدتَ قطعته المخبّأة ✓' : 'خبّأ قطعة! ابحث عنها'}</span></div>` : ''}</span>
+        <span class="t-line">${s.g ? `البستان ${ORDF[(s.g || 1) - 1]} — كاملة ${AR(s.full || 0)}، مثمرة ${AR(s.sealed || 0)}${s.ajza ? `، والأجزاء ${AR(s.ajza)}` : ''}` : 'لم يفتح بستانه بعد'}</span>${f.hide ? `<div class="t-chips"><span class="t-chip seal">${f.hide.found ? 'وجدتَ قطعته المخبّأة ✓' : 'خبّأ قطعة! ابحث عنها'}</span></div>` : ''}</span>
         <button class="btn primary" data-act="visit" data-f="${i}">زُر بستانه</button></div>`; }).join('')
       : '<p class="t-note">لا زملاء في حلقتك بعد.</p>'}
     <div class="row" style="margin-top:12px"><button class="btn light" data-act="close">إغلاق</button></div>`);
@@ -6256,7 +6414,7 @@ async function drawAcct() {
       body.innerHTML = `<div class="t-sum"><div><b>${AR(r.students.length)}</b><span>التلاميذ</span></div><div><b>${AR(W)}</b><span>سورة تنتظر التسميع</span></div><div><b>${AR(late)}</b><span>يحتاجون مراجعة</span></div></div>
         ${u.role === 'teacher' ? toolsRow() : ''}<div class="t-sec"><h3>التلاميذ</h3>${r.students.length ? r.students.map((s, i) => { const m = s.summary;
           return `<div class="a-row"><button class="a-open" data-a="open" data-i="${i}"><span class="t-ava" aria-hidden="true">${escA(s.name[0])}</span>
-            <span class="t-who"><b>${escA(s.name)}</b><span class="t-line">${m ? `البستان ${ORDF[(m.g || 1) - 1]} — كاملة ${AR(m.full || 0)}، مثمرة ${AR(m.sealed || 0)}` : ''} ${u.role === 'teacher' ? `<small>(${escA(s.username)})</small>` : ''}</span>${chipsS(m)}</span></button>
+            <span class="t-who"><b>${escA(s.name)}</b><span class="t-line">${m ? `البستان ${ORDF[(m.g || 1) - 1]} — كاملة ${AR(m.full || 0)}، مثمرة ${AR(m.sealed || 0)}${m.ajza ? `، والأجزاء ${AR(m.ajza)}` : ''}` : ''} ${u.role === 'teacher' ? `<small>(${escA(s.username)})</small>` : ''}</span>${chipsS(m)}</span></button>
             ${u.role === 'teacher' ? `<span class="a-btns"><button class="btn light" data-a="newpass" data-i="${i}">كلمة سر جديدة</button><button class="btn del" data-a="del" data-i="${i}">حذف التلميذ</button></span>` : ''}</div>`; }).join('')
           : `<p class="t-note">${u.role === 'teacher' ? 'لم تُضف تلميذًا بعد. أضف تلاميذك من الأسفل، وأعطِ كل واحد اسم دخوله وكلمة سره.' : 'لا تلاميذ عند هذا المعلم بعد.'}</p>`}</div>
         ${u.role === 'teacher' ? addForm('student') : ''}`;
@@ -6635,7 +6793,7 @@ const shuffle = (a) => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) {
 function threeOf(correct, near) { const w = shuffle(near.filter((x) => x !== correct && x != null)).filter((x, i, a) => a.indexOf(x) === i).slice(0, 2); return w.length < 2 ? null : w; }
 function genQuestion() {
   // a surah he has memorised, most of the time
-  const mine = [...new Set(Object.values(plots).filter((p) => p && p.surah != null && (p.sealed || p.grown)).map((p) => TREES[p.surah][1]))].filter((n) => n >= 78);
+  const mine = [...new Set(Object.values(plots).filter((p) => p && p.surah != null && TREES[p.surah] && (p.sealed || p.grown)).map((p) => TREES[p.surah][1]))].filter((n) => n >= 78);
   const n = mine.length && Math.random() < .7 ? pickOne(mine) : pickOne(AMMA), i = AMMA.indexOf(n), nm = (k) => SNAME[k];
   const kinds = ['ayat', 'ayat', 'after', 'before', 'num', 'more', 'fact'];
   for (let tries = 0; tries < 12; tries++) {
@@ -6780,7 +6938,7 @@ function markAnswer(P, right, still) {
 function headSays(right) {
   if (STILL || guide.hidden) return;
   guide.classList.remove('nod', 'shake'); void guide.offsetWidth; guide.classList.add(right ? 'nod' : 'shake');
-  setTimeout(() => guide.classList.remove('nod', 'shake'), 1300);
+  setTimeout(() => guide.classList.remove('nod', 'shake'), right ? 1400 : 2000);
 }
 function feedback(i, right, correctI) {
   const D = SG.q; sound(right); headSays(right);
@@ -7367,7 +7525,7 @@ world.addEventListener('click', async (e) => {
   const h = hiding; hideDone();
   try { const r = await api('hideSet', { piece: h.name, g: gi, x: m.x, y: m.y }); settings.hide = { id: r.id || '', piece: h.name, g: gi, x: +m.x.toFixed(1), y: +m.y.toFixed(1), until: r.until }; save(); drawHides(); }
   catch (er) { return tell(escA(er.message)); }
-  say(`خبّأتُ <b>${dname(h.name)}</b> تحت حجر أو عشب في <b>البستان ${ORDF[gi]}</b>، ووضعتُ حوله ثلاثة غيره ليحتار زملاؤك! يبقى التحدي يومًا كاملًا، ومن وجدها أخذ مثلها، ولك ٥ نقاط عن كل واحد.`);
+  say(`خبّأتُ <b>${dname(h.name)}</b> تحت حجر أو عشب في <b>${BST(gi)}</b>، ووضعتُ حوله ثلاثة غيره ليحتار زملاؤك! يبقى التحدي يومًا كاملًا، ومن وجدها أخذ مثلها، ولك ٥ نقاط عن كل واحد.`);
 }, true);
 // the four stones and tufts: the same for him and for every classmate (drawn from the hiding place itself)
 const COVERS = ['حجر', 'حجر2', 'عشب', 'عشب2', 'عشب3'];
