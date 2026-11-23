@@ -1004,7 +1004,7 @@ const TEST_TOOLS = !API || new URLSearchParams(location.search).has('test');
 const SESSION_KEY = 'bustan-session';
 let session = null, syncTimer = null, pushing = false, updateWaiting = null;
 function isStudent() { return !!(session && session.user.role === 'student'); }
-const APP_VERSION = '2026.11.22.4';
+const APP_VERSION = '2026.11.22.5';
 const DEFAULTS = { leaves: LEAF_ORDER.length, opened: 1, stars: 0, plough: false, portionMax: 5, chainOne: 3, chainJoin: 3, reviewEvery: 1 };
 const SAMPLE = {};
 let settings = { ...DEFAULTS }, plots = {};
@@ -7568,12 +7568,14 @@ function drawHides() {
   if (!H || !gds[H.g]) return;
   const P = pieceDef(H.piece), cv = coverAt(H); if (!P || !cv) return;
   const cEl = decoEls[H.g + ':' + cv.i]; if (!cEl) return;
-  // its size: smaller than the stone (at most three quarters of its height, four fifths of its width); its place: behind it, a
-  // little to one side, a third of it above the stone's top — found, beside it on the grass, in front
-  const B = boxOf(cv), pb = P.box, f = Math.min(.74 * B.h / (pb[3] * P.s), .8 * B.w / (pb[2] * P.s)), k = P.s * f, ph = pb[3] * k, pw = pb[2] * k;
+  // its size: (أبو حفص, 22 Nov, night: «حجمها أكبر من حجم العشب») about half the stone's or tuft's height and width, so it is
+  // plainly smaller; its place: standing on the same grass behind it, towards one side, a quarter of it out past the stone's edge
+  // — found, beside it on the grass, in front
+  const B = boxOf(cv), pb = P.box, f = Math.min(.5 * B.h / (pb[3] * P.s), .45 * B.w / (pb[2] * P.s)), k = P.s * f, ph = pb[3] * k, pw = pb[2] * k;
   const side = cv.i % 2 ? 1 : -1, mid = (pb[0] + pb[2] / 2) * k;
-  const x = H.found ? B.x + B.w / 2 + side * (B.w / 2 + pw / 2 + 3) - mid : B.x + B.w / 2 + side * B.w * .14 - mid;
-  const y = H.found ? cv.d.y - (pb[1] + pb[3]) * k : B.y - .34 * ph - pb[1] * k;
+  const edge = B.x + B.w / 2 + side * B.w / 2;
+  const x = (H.found ? edge + side * (pw / 2 + 3) : edge - side * .25 * pw) - mid;
+  const y = H.found ? cv.d.y - (pb[1] + pb[3]) * k : cv.d.y - .12 * B.h - (pb[1] + pb[3]) * k;
   const pk = el('g', { class: 'hide-peek', transform: `translate(${x.toFixed(1)} ${y.toFixed(1)}) scale(${k.toFixed(4)})`, 'aria-hidden': 'true' });
   useOf(P.ref, pk); cEl.parentNode.insertBefore(pk, H.found ? cEl.nextSibling : cEl);
   if (!VIEW_ONLY || H.found) return;
@@ -7582,7 +7584,7 @@ function drawHides() {
   coversIn(H.g).forEach((q) => {
     const b = boxOf(q), real = q.i === cv.i;
     const g = el('g', { class: 'hide-cover', role: 'button', 'aria-label': 'حجر أو عشب: هل خلفه القطعة؟' }, L);
-    el('rect', { class: 'hide-hit', x: (b.x - 4).toFixed(1), y: (b.y - (real ? .4 * ph : 4)).toFixed(1), width: (b.w + 8).toFixed(1), height: (b.h + (real ? .4 * ph : 4) + 2).toFixed(1), fill: 'transparent' }, g);
+    el('rect', { class: 'hide-hit', x: (b.x - (real ? pw * .4 : 0) - 4).toFixed(1), y: (b.y - 4).toFixed(1), width: (b.w + (real ? pw * .8 : 0) + 8).toFixed(1), height: (b.h + 6).toFixed(1), fill: 'transparent' }, g);
     g.addEventListener('click', (e) => { e.stopPropagation(); coverTap(q, real); });
   });
 }
