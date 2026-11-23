@@ -237,6 +237,21 @@ button:focus-visible, [role="button"]:focus-visible { outline: 3px solid #ffd54a
 .t-stu .t-who { flex: 1; min-width: 0; }
 .t-stu b { font-size: 16px; } .t-stu .t-line { display: block; font-size: 13px; color: var(--muted); }
 .t-chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+/* (23 Nov) the garden printed on a sheet of A4, across: its picture, his name and its palms */
+.no-server { position: fixed; inset: 0; z-index: 99; display: grid; place-items: center; padding: 24px; background: var(--sky-a, #bfe3f5); font-family: var(--font); text-align: center; }
+.no-server > div { background: #fff; border-radius: 18px; padding: 20px; max-width: 360px; box-shadow: 0 8px 30px rgba(0,0,0,.15); }
+.no-server b { font-size: 19px; color: #2f5a1f; } .no-server p { font-size: 15px; line-height: 1.7; margin: 10px 0 14px; color: #444; }
+#printView { display: none; }
+@media print {
+  @page { size: A4 landscape; margin: 9mm; }
+  html, body { background: #fff !important; height: auto !important; overflow: visible !important; }
+  body > *:not(#printView) { display: none !important; }
+  #printView { display: block !important; text-align: center; color: #2f5a1f; font-family: var(--font); direction: rtl; }
+  #printView .pv-top { font-size: 12pt; color: #7a8f6c; margin: 0 0 1mm; }
+  #printView h1 { font-size: 24pt; margin: 0 0 3mm; }
+  #printView img { display: block; width: 100%; max-height: 150mm; object-fit: contain; border-radius: 5mm; margin: 0 auto; }
+  #printView p { font-size: 13pt; margin: 3mm 0 0; line-height: 1.5; }
+}
 .t-juzs { display: grid; grid-template-columns: repeat(auto-fill, minmax(46px, 1fr)); gap: 6px; }
 .t-juz { min-height: 40px; border-radius: 10px; border: 2px solid #d9e6d2; background: #fff; color: var(--ink); font: inherit; font-weight: 800; font-size: 15px; cursor: pointer; }
 .t-juz.done { background: #eef4ea; color: var(--frond); }
@@ -1009,7 +1024,7 @@ const TEST_TOOLS = !API || new URLSearchParams(location.search).has('test');
 const SESSION_KEY = 'bustan-session';
 let session = null, syncTimer = null, pushing = false, updateWaiting = null;
 function isStudent() { return !!(session && session.user.role === 'student'); }
-const APP_VERSION = '2026.11.23.1';
+const APP_VERSION = '2026.11.23.2';
 const DEFAULTS = { leaves: LEAF_ORDER.length, opened: 1, stars: 0, plough: false, portionMax: 5, chainOne: 3, chainJoin: 3, reviewEvery: 1 };
 const SAMPLE = {};
 let settings = { ...DEFAULTS }, plots = {};
@@ -4309,6 +4324,7 @@ function openSettings() {
     <div class="row" style="margin-top:10px"><button class="btn light" data-act="huntoffer">ناصح يخبّئ مفاجأة (تجربة)</button></div>
     <div class="row" style="margin-top:10px"><button class="btn light" data-act="opennext" ${(settings.opened || 1) >= NA ? 'disabled style="opacity:.45"' : ''}>افتح البستان التالي (تجربة)</button></div>
     <div class="row" style="margin-top:10px"><button class="btn light" data-act="newgarden">غيّر سماء البساتين</button></div>
+    <div class="row" style="margin-top:10px"><button class="btn primary" data-act="print">اطبع هذا البستان</button></div>
     <div class="row" style="margin-top:10px"><button class="btn light" data-act="update">تنزيل التحديثات <small class="a-ver">(الإصدار ${APP_VERSION})</small>${updateWaiting ? ' <span class="a-dot"></span>' : ''}</button></div>`);
 }
 // the garden's name: a word or two of the child's own (letters only), on the sign at the top — tapped, it asks for it
@@ -4374,6 +4390,7 @@ body.addEventListener('click', (e) => {
   if (act === 'close') return closeSheet();
   if (act === 'gname') return saveGName(+b.dataset.g);
   if (act === 'update') { closeSheet(); return checkUpdate(true); }
+  if (act === 'print') { closeSheet(); return printGarden(); }
   if (act === 'friends') return openFriends();
   if (act === 'visit') return visitFriend(friends.list[+b.dataset.f]);
   if (act === 'mypass') return openMyPass();
@@ -4703,7 +4720,22 @@ if (window.ResizeObserver) new ResizeObserver(() => requestAnimationFrame(onResi
 const fsBtn = $('goFull'), FS_IN = 'M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5', FS_OUT = 'M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5';
 const fsNow = () => document.fullscreenElement || document.webkitFullscreenElement || null;
 const INSTALLED = (window.matchMedia && matchMedia('(display-mode: fullscreen), (display-mode: standalone)').matches) || navigator.standalone === true;
-fsBtn.hidden = INSTALLED || !(document.fullscreenEnabled || document.webkitFullscreenEnabled);
+// (23 Nov: «لا يزال الشريط الذي في الأسفل ظاهرا، ولا يوجد زر ملء الشاشة»: the installed program may still open with the phone's
+// bars (a phone that kept the earlier way); then the button is there, and the first touch asks for the whole screen too — again
+// after he leaves the program and comes back)
+const FS_OK = !!(document.fullscreenEnabled || document.webkitFullscreenEnabled);
+const barsShow = () => Math.max(screen.width, screen.height) - Math.max(window.innerWidth, window.innerHeight) > 40;
+function fsShow() { fsBtn.hidden = !FS_OK || (INSTALLED && !fsNow() && !barsShow()); }
+fsShow();
+let fsAsked = false;
+function fsTouch() {
+  if (!INSTALLED || !FS_OK || fsNow() || fsAsked || !barsShow()) return;
+  fsAsked = true; const root = document.documentElement, rq = root.requestFullscreen || root.webkitRequestFullscreen;
+  try { const pr = rq.call(root, { navigationUI: 'hide' }); if (pr && pr.catch) pr.catch(() => {}); } catch (e) {}
+}
+['pointerup', 'touchend'].forEach((ev) => document.addEventListener(ev, fsTouch, { capture: true, passive: true }));
+document.addEventListener('visibilitychange', () => { if (!document.hidden) { fsAsked = false; setTimeout(fsShow, 400); } });
+window.addEventListener('resize', () => setTimeout(fsShow, 300));
 // أبو حفص (22 Nov): «لماذا لا يمكن تثبيت البرنامج إلى الجوال؟»: where the browser offers it, ناصح offers to put the garden on the
 // phone's screen like an app (once a day, three times at most); opened from there it fills the screen by itself
 let installAsk = null;
@@ -4730,7 +4762,7 @@ fsBtn.addEventListener('click', async () => {
     try { await screen.orientation.lock('portrait'); } catch (e) {}      // Android keeps the garden upright while full screen
   } catch (e) { toast('هذا المتصفح لا يسمح بملء الشاشة هنا'); }
 });
-['fullscreenchange', 'webkitfullscreenchange'].forEach((ev) => document.addEventListener(ev, () => { fsIcon(); onResize(); setTimeout(onResize, 350); }));
+['fullscreenchange', 'webkitfullscreenchange'].forEach((ev) => document.addEventListener(ev, () => { fsIcon(); fsShow(); onResize(); setTimeout(onResize, 350); }));
 // أبو حفص (22 Nov, evening): «بعد تثبيت البرنامج في وضع ملء الشاشة صار يظهر خطًا أبيض»، ثم «لا يزال الخط الأبيض ظاهرا»، ثم: «لو صغر
 // الشاشة ثم عاد إليها فإنها لا تعود ملء الشاشة»: a program installed from Chrome on Android cannot yet draw where the phone's clock
 // and camera are (Chrome's own known limit, its fix not yet out; in a browser tab the whole screen works). So the installed program
@@ -4882,10 +4914,10 @@ function typeIn(box) {
   if (STILL) return 0;
   const nodes = [], walk = document.createTreeWalker(box, NodeFilter.SHOW_TEXT); let n;
   while ((n = walk.nextNode())) if (!(n.parentNode.closest && n.parentNode.closest('.b-row'))) { nodes.push([n, Array.from(n.nodeValue)]); n.nodeValue = ''; }
-  const row = box.querySelector('.b-row'); if (row) row.style.visibility = 'hidden';
-  const total = nodes.reduce((a, [, c]) => a + c.length, 0); if (!total) { if (row) row.style.visibility = ''; return 0; }
+  // (23 Nov: «ظهرت رسالة خذني إلى البئر واخترت لاحقا ولم يعمل الزر إلا متأخرا جدا»: his buttons are there from the start, and work)
+  const total = nodes.reduce((a, [, c]) => a + c.length, 0); if (!total) return 0;
   let i = 0, j = 0, count = 0;
-  const finish = () => { nodes.forEach(([nd, c]) => { nd.nodeValue = c.join(''); }); if (row) row.style.visibility = ''; };
+  const finish = () => { nodes.forEach(([nd, c]) => { nd.nodeValue = c.join(''); }); };
   typing = { finish, timer: setInterval(() => {
     if (i >= nodes.length) { clearInterval(typing.timer); typing = null; finish(); return; }
     const [nd, c] = nodes[i]; nd.nodeValue += c[j]; if (++count % 2 === 0 && /\S/.test(c[j])) typeTap();
@@ -4978,7 +5010,7 @@ function ask(html, buttons, cb) {
   say(`${html}<span class="b-row">${buttons.map(([id, label, cls]) => `<button class="btn ${cls || 'light'}" data-ask="${id}">${label}</button>`).join('')}</span>`, { stay: true });
 }
 bubble.addEventListener('click', (e) => {
-  if (typing) { e.stopPropagation(); stopTyping(); return; }      // (a tap while he writes: the rest at once)
+  if (typing) { const bt = e.target.closest('button'); stopTyping(); if (!bt) { e.stopPropagation(); return; } }      // (a tap while he writes: the rest at once — a button acts)
   const ab = e.target.closest('[data-ask]'); if (ab) { e.stopPropagation(); const f = askCb; askCb = null; hideHint(); if (f) f(ab.dataset.ask); return; }
   const hb = e.target.closest('[data-hunt]'); if (hb) { e.stopPropagation(); return huntAnswer(hb.dataset.hunt); }
   if (pendingLetter && bird.perched && !bird.busy) openLetter(pendingLetter);
@@ -6312,6 +6344,7 @@ function openMine() {
   current = null; const u = session.user;
   openSheet(`<h2 id="sheetTitle">حسابي</h2><div class="sub">${escA(u.name)} — حلقة ${escA(u.teacherName || '')}</div>
     <div class="row" style="margin-top:12px"><button class="btn primary" data-act="friends">بساتين زملائي</button></div>
+    <div class="row" style="margin-top:10px"><button class="btn light" data-act="print">اطبع بستاني (الذي أنا فيه)</button></div>
     <div class="row" style="margin-top:10px"><button class="btn light" data-act="mypass">غيّر كلمة سري</button></div>
     <div class="row" style="margin-top:10px"><button class="btn light" data-act="update">تنزيل التحديثات <small class="a-ver">(الإصدار ${APP_VERSION})</small>${updateWaiting ? ' <span class="a-dot"></span>' : ''}</button></div>
     ${TEST_TOOLS ? '<div class="row" style="margin-top:10px"><button class="btn light" data-act="tools">أدوات التجربة</button></div>' : ''}
@@ -7401,9 +7434,10 @@ async function asData(href) {
   catch (e) { return href; }
 }
 const STYLE_KEYS = ['fill', 'fill-opacity', 'stroke', 'stroke-width', 'stroke-opacity', 'stroke-dasharray', 'stroke-linecap', 'stroke-linejoin', 'opacity', 'transform', 'transform-origin', 'transform-box', 'filter', 'font-size', 'font-weight', 'visibility'];
-async function snapWorld(box, px, rect) {
+async function snapWorld(box, px, rect, opts = {}) {
+  const [PW, PH] = Array.isArray(px) ? px : [px, px];
   const st = $('stage'), out = st.cloneNode(false), [x, y, w, h] = box;
-  out.setAttribute('viewBox', `${x.toFixed(2)} ${y.toFixed(2)} ${w.toFixed(2)} ${h.toFixed(2)}`); out.setAttribute('width', px); out.setAttribute('height', px);
+  out.setAttribute('viewBox', `${x.toFixed(2)} ${y.toFixed(2)} ${w.toFixed(2)} ${h.toFixed(2)}`); out.setAttribute('width', PW); out.setAttribute('height', PH);
   out.setAttribute('xmlns', NS); out.removeAttribute('class'); out.removeAttribute('style'); out.setAttribute('preserveAspectRatio', 'none');
   const S = ART.skies[garden.sky], sky = el('g', {}, out);
   el('rect', { x: x - 2, y: y - 2, width: w + 4, height: h + 4, fill: S.top || '#bfe3f5' }, sky);
@@ -7412,13 +7446,20 @@ async function snapWorld(box, px, rect) {
   // behind it, where the screen shows them; they are put into the picture at those places)
   const inv = st.getScreenCTM().inverse(), toW = (X, Y) => new DOMPoint(X, Y).matrixTransform(inv);
   const place = (r) => { const a = toW(r.left, r.top), b = toW(r.right, r.bottom); return { x: a.x, y: a.y, w: b.x - a.x, h: b.y - a.y }; };
-  $('clouds').querySelectorAll('.cloud').forEach((c) => {
+  if (opts.sky) {          // (a whole garden, printed: the sun high on the left, three clouds across its sky)
+    [...$('clouds').querySelectorAll('.cloud img')].slice(0, 3).forEach((im, n) => {
+      const cw = w * [.13, .1, .085][n], ch = cw * ((im.naturalHeight || 1) / (im.naturalWidth || 2)), cx = x + w * [.62, .36, .12][n], cy = y + h * [.07, .03, .12][n];
+      el('image', { x: cx.toFixed(1), y: cy.toFixed(1), width: cw.toFixed(1), height: ch.toFixed(1), preserveAspectRatio: 'none' }, sky).setAttribute('href', im.getAttribute('src'));
+    });
+    const s = h * .26, sv = $('sunSvg').cloneNode(true); sv.removeAttribute('id'); sv.removeAttribute('class'); sv.removeAttribute('style');
+    [x + w * .8, y + h * .02, s, s].forEach((v, n) => sv.setAttribute(['x', 'y', 'width', 'height'][n], v.toFixed(1))); sv.setAttribute('overflow', 'visible'); sky.appendChild(sv);
+  } else $('clouds').querySelectorAll('.cloud').forEach((c) => {
     const r = c.getBoundingClientRect(); if (r.right < rect.left || r.left > rect.right || r.bottom < rect.top || r.top > rect.bottom) return;
     const b = place(r), im = c.querySelector('img'), g = el('g', c.classList.contains('mirror') ? { transform: `translate(${(2 * b.x + b.w).toFixed(2)} 0) scale(-1 1)` } : {}, sky);
     el('image', { x: b.x.toFixed(2), y: b.y.toFixed(2), width: b.w.toFixed(2), height: b.h.toFixed(2), preserveAspectRatio: 'none' }, g).setAttribute('href', im.getAttribute('src'));
   });
   const sun = $('sunSvg'), sr = sun.getBoundingClientRect();
-  if (!(sr.right < rect.left || sr.left > rect.right || sr.bottom < rect.top || sr.top > rect.bottom)) {
+  if (!opts.sky && !(sr.right < rect.left || sr.left > rect.right || sr.bottom < rect.top || sr.top > rect.bottom)) {
     const b = place(sr), sv = sun.cloneNode(true); sv.removeAttribute('id'); sv.removeAttribute('class'); sv.removeAttribute('style');
     ['x', 'y', 'width', 'height'].forEach((k, n) => sv.setAttribute(k, [b.x, b.y, b.w, b.h][n].toFixed(2))); sv.setAttribute('overflow', 'visible'); sky.appendChild(sv);
   }
@@ -7439,9 +7480,31 @@ async function snapWorld(box, px, rect) {
   const text = new XMLSerializer().serializeToString(out), url = URL.createObjectURL(new Blob([text], { type: 'image/svg+xml' }));
   const img = new Image(); img.decoding = 'sync';
   await new Promise((ok, no) => { img.onload = ok; img.onerror = no; img.src = url; });
-  const cv = document.createElement('canvas'); cv.width = cv.height = px; const ctx = cv.getContext('2d');
-  ctx.drawImage(img, 0, 0, px, px); await new Promise((ok) => setTimeout(ok, 250)); ctx.drawImage(img, 0, 0, px, px);   // (some browsers paint its pictures only the second time)
+  const cv = document.createElement('canvas'); cv.width = PW; cv.height = PH; const ctx = cv.getContext('2d');
+  ctx.drawImage(img, 0, 0, PW, PH); await new Promise((ok) => setTimeout(ok, 250)); ctx.drawImage(img, 0, 0, PW, PH);   // (some browsers paint its pictures only the second time)
   try { const jpg = cv.toDataURL('image/jpeg', .86); URL.revokeObjectURL(url); return jpg; } catch (e) { return url; }      // (where the picture may not be read back, the drawing itself)
+}
+// أبو حفص (23 Nov): «وأضف زر طباعة البستان»: the garden he is in, whole (its four screens), on a sheet of A4 across — his name and
+// the garden's above it, its palms and the day below — to hang in his room
+async function printGarden() {
+  const I = stopInfo(page()), g = I.g;
+  if (!gardenOpen(g)) return tell('هذا البستان ما زال مقفلًا. اذهب إلى بستان من بساتينك، ثم اطبعه.');
+  toast('يجهّز ناصح صورة بستانك للطباعة…');
+  if (I.scr < 0) scrollToPage(stopOf(g, 0));
+  for (let d = g - 1; d <= g + 1; d++) { const D = gds[d]; if (D && D.img && !D.img.getAttribute('href')) { D.img.setAttribute('href', GR(d).img); D.loaded = true; } if (D && D.el) D.el.classList.remove('far'); }
+  await new Promise((ok) => setTimeout(ok, 900));
+  const st = $('stage'), m = st.getScreenCTM(), x = offX(g), a = new DOMPoint(x, 0).matrixTransform(m), b = new DOMPoint(x + ART.W, ART.H).matrixTransform(m);
+  const rect = { left: Math.min(a.x, b.x), right: Math.max(a.x, b.x), top: a.y, bottom: b.y };
+  let url; try { url = await snapWorld([x, 0, ART.W, ART.H], [2400, Math.round(2400 * ART.H / ART.W)], rect, { sky: true }); } catch (e) { return tell('لم أستطع تصوير البستان، فجرّب مرة أخرى.'); }
+  const names = inGarden(g).filter((k) => plots[k]).map((k) => SURAHS[plots[k].surah]);
+  let day = ''; try { day = new Intl.DateTimeFormat('ar-SY', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date()); } catch (e) {}
+  let pv = $('printView'); if (!pv) { pv = document.createElement('div'); pv.id = 'printView'; document.body.appendChild(pv); }
+  pv.innerHTML = `<div class="pv-top">بساتين الحفّاظ</div><h1>${escT(gname(g) || BST(g))} — بستان ${escT(CHILD || GREET_NAME || '')}</h1><img alt="">`
+    + `<p>${names.length ? `فيه ${names.length === 1 ? 'نخلة' : 'نخلات'}: ${names.map(escT).join('، ')}` : ''}${day ? `${names.length ? ' — ' : ''}${day}` : ''}</p>`;
+  const im = pv.querySelector('img');
+  await new Promise((ok) => { im.onload = ok; im.onerror = ok; im.src = url; });
+  $('toast').classList.remove('show');
+  setTimeout(() => { try { window.print(); } catch (e) { tell('هذا المتصفح لا يطبع من هنا. افتح البرنامج في Chrome ثم اطبع.'); } }, 300);
 }
 // the pieces on the easel: the place i (from the top left) shows the square PZ.pieces[i] of the picture
 function pzBegin() {
@@ -7633,7 +7696,11 @@ async function findHide(e) {
   alertBox(`ما شاء الله! وجدتَ القطعة التي خبّأها <b>${escA(f.name)}</b>: ${escA(dname(H.piece))}. يصلك مثلها في خزانتك بعد رجوعك إلى بستانك.`);
 }
 
-boot();
+// (23 Nov: «أعطيت من يجرب البرنامج فظهر له أدوات التجربة واسم أحمد»: on the site itself, without the server's address — config.js
+// not loaded — the program says so and waits, instead of opening the trial garden of one phone)
+if (!API && /\.github\.io$/i.test(location.hostname)) {
+  document.body.insertAdjacentHTML('beforeend', `<div class="no-server" role="alert"><div><b>لم يصل البرنامج إلى عنوان الخادم</b><p>تأكد من اتصالك بالإنترنت، ثم أعد فتح البرنامج. وإن بقيت هذه الرسالة فأخبر المعلم: ملف config.js في المستودع ليس فيه رابط الخادم.</p><button class="btn primary" onclick="location.reload()">أعد المحاولة</button></div></div>`);
+} else boot();
 </script>
 
 </html>
